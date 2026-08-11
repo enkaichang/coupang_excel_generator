@@ -1,3 +1,5 @@
+const APP_VERSION = 'v1.2.0';
+
 document.addEventListener('DOMContentLoaded', () => {
   const excelDropZone = document.getElementById('excelDropZone');
   const excelInput = document.getElementById('excelInput');
@@ -541,6 +543,12 @@ document.addEventListener('DOMContentLoaded', () => {
     processedResults = [];
     harnessExcelBuffer = null;
     leashExcelBuffer = null;
+    harnessCount = 0;
+    leashCount = 0;
+    filesToExport = {
+      '胸背帶': { images: new Map(), back_labels: new Map() },
+      '項圈牽繩': { images: new Map(), back_labels: new Map() }
+    };
     
     statTotalSku.textContent = '0';
     statMatchedImages.textContent = '0';
@@ -782,10 +790,12 @@ document.addEventListener('DOMContentLoaded', () => {
           targetWs = outWsHarness;
           targetRowIdx = harnessRowIdx++;
           tmplMap = harnessMap;
+          harnessCount++;
         } else {
           targetWs = outWsLeash;
           targetRowIdx = leashRowIdx++;
           tmplMap = leashMap;
+          leashCount++;
         }
         
         const getSourceHeaderIdx = (colName) => {
@@ -906,12 +916,30 @@ document.addEventListener('DOMContentLoaded', () => {
       statMatchedImages.textContent = matchCount;
       statMissingImages.textContent = missCount;
 
-      harnessExcelBuffer = await outWbHarness.outputAsync();
-      leashExcelBuffer = await outWbLeash.outputAsync();
+      if (harnessCount > 0) {
+        harnessExcelBuffer = await outWbHarness.outputAsync();
+      } else {
+        harnessExcelBuffer = null;
+      }
 
-      btnSaveToFolder.disabled = false;
-      btnDownloadZip.disabled = false;
-      logMessage(`全部處理完成！共 ${totalCount} 筆 SKU，配對成功 ${matchCount} 筆，缺圖 ${missCount} 筆`, 'success');
+      if (leashCount > 0) {
+        leashExcelBuffer = await outWbLeash.outputAsync();
+      } else {
+        leashExcelBuffer = null;
+      }
+
+      if (totalCount === 0) {
+        btnSaveToFolder.disabled = true;
+        btnDownloadZip.disabled = true;
+        logMessage('處理完成，但未找到任何符合篩選條件的商品資料。', 'warning');
+      } else {
+        btnSaveToFolder.disabled = false;
+        btnDownloadZip.disabled = false;
+        const typesDesc = [];
+        if (harnessCount > 0) typesDesc.push(`胸背帶: ${harnessCount} 筆`);
+        if (leashCount > 0) typesDesc.push(`項圈牽繩: ${leashCount} 筆`);
+        logMessage(`全部處理完成！共 ${totalCount} 筆 SKU（${typesDesc.join('，')}），配對成功 ${matchCount} 筆，缺圖 ${missCount} 筆`, 'success');
+      }
 
     } catch(e) {
       console.error(e);
@@ -945,46 +973,72 @@ document.addEventListener('DOMContentLoaded', () => {
     setProgress(0, '正在寫入檔案至所選資料夾...');
 
     try {
-      const harnessDir = await dirHandle.getDirectoryHandle('胸背帶', { create: true });
-      const harnessImgDir = await harnessDir.getDirectoryHandle('images', { create: true });
-      const harnessLabelDir = await harnessDir.getDirectoryHandle('back_labels', { create: true });
-      
-      const leashDir = await dirHandle.getDirectoryHandle('項圈牽繩', { create: true });
-      const leashImgDir = await leashDir.getDirectoryHandle('images', { create: true });
-      const leashLabelDir = await leashDir.getDirectoryHandle('back_labels', { create: true });
+      const savedCategories = [];
+      let totalFiles = 0;
 
-      if (harnessExcelBuffer) {
-        const fh = await harnessDir.getFileHandle('商品報價單_胸背帶_auto_generate.xlsx', { create: true });
-        const w = await fh.createWritable();
-        await w.write(harnessExcelBuffer);
-        await w.close();
-      }
-      if (leashExcelBuffer) {
-        const fh = await leashDir.getFileHandle('商品報價單_項圈 牽繩_auto_generate.xlsx', { create: true });
-        const w = await fh.createWritable();
-        await w.write(leashExcelBuffer);
-        await w.close();
-      }
-
+      // 1. 胸背帶 (僅在有資料時輸出)
       const hData = filesToExport['胸背帶'];
-      for (const [filename, blob] of hData.images.entries()) {
-        await writeBlob(harnessImgDir, filename, blob);
-      }
-      for (const [filename, blob] of hData.back_labels.entries()) {
-        await writeBlob(harnessLabelDir, filename, blob);
+      if (harnessCount > 0 || harnessExcelBuffer || hData.images.size > 0 || hData.back_labels.size > 0) {
+        savedCategories.push('胸背帶');
+        const harnessDir = await dirHandle.getDirectoryHandle('胸背帶', { create: true });
+        
+        if (harnessExcelBuffer) {
+          const fh = await harnessDir.getFileHandle('商品報價單_胸背帶_auto_generate.xlsx', { create: true });
+          const w = await fh.createWritable();
+          await w.write(harnessExcelBuffer);
+          await w.close();
+        }
+
+        if (hData.images.size > 0) {
+          const harnessImgDir = await harnessDir.getDirectoryHandle('images', { create: true });
+          for (const [filename, blob] of hData.images.entries()) {
+            await writeBlob(harnessImgDir, filename, blob);
+          }
+        }
+        if (hData.back_labels.size > 0) {
+          const harnessLabelDir = await harnessDir.getDirectoryHandle('back_labels', { create: true });
+          for (const [filename, blob] of hData.back_labels.entries()) {
+            await writeBlob(harnessLabelDir, filename, blob);
+          }
+        }
+        totalFiles += hData.images.size + hData.back_labels.size;
       }
 
+      // 2. 項圈牽繩 (僅在有資料時輸出)
       const lData = filesToExport['項圈牽繩'];
-      for (const [filename, blob] of lData.images.entries()) {
-        await writeBlob(leashImgDir, filename, blob);
-      }
-      for (const [filename, blob] of lData.back_labels.entries()) {
-        await writeBlob(leashLabelDir, filename, blob);
+      if (leashCount > 0 || leashExcelBuffer || lData.images.size > 0 || lData.back_labels.size > 0) {
+        savedCategories.push('項圈牽繩');
+        const leashDir = await dirHandle.getDirectoryHandle('項圈牽繩', { create: true });
+
+        if (leashExcelBuffer) {
+          const fh = await leashDir.getFileHandle('商品報價單_項圈 牽繩_auto_generate.xlsx', { create: true });
+          const w = await fh.createWritable();
+          await w.write(leashExcelBuffer);
+          await w.close();
+        }
+
+        if (lData.images.size > 0) {
+          const leashImgDir = await leashDir.getDirectoryHandle('images', { create: true });
+          for (const [filename, blob] of lData.images.entries()) {
+            await writeBlob(leashImgDir, filename, blob);
+          }
+        }
+        if (lData.back_labels.size > 0) {
+          const leashLabelDir = await leashDir.getDirectoryHandle('back_labels', { create: true });
+          for (const [filename, blob] of lData.back_labels.entries()) {
+            await writeBlob(leashLabelDir, filename, blob);
+          }
+        }
+        totalFiles += lData.images.size + lData.back_labels.size;
       }
 
-      const totalFiles = hData.images.size + hData.back_labels.size + lData.images.size + lData.back_labels.size;
-      setProgress(100, `已成功將 ${totalFiles} 個圖檔與 Excel 存入所選資料夾！`);
-      logMessage(`全部處理完成！共儲存 ${totalFiles} 個不重複圖檔（主圖/情境圖/尺寸規格表已自動去重複共用），無安全性警告！`, 'success');
+      if (savedCategories.length === 0) {
+        alert('無可儲存的產品資料。');
+        return;
+      }
+
+      setProgress(100, `已成功將【${savedCategories.join('、')}】之 ${totalFiles} 個圖檔與 Excel 存入所選資料夾！`);
+      logMessage(`全部處理完成！已儲存【${savedCategories.join('、')}】資料，共 ${totalFiles} 個不重複圖檔（主圖/情境圖/尺寸規格表已自動去重複共用），無安全性警告！`, 'success');
     } catch (err) {
       console.error('寫入資料夾失敗:', err);
       logMessage(`寫入資料夾失敗: ${err.message}`, 'error');
@@ -1009,34 +1063,62 @@ document.addEventListener('DOMContentLoaded', () => {
     setProgress(0, '正在打包為 ZIP 檔...');
 
     const zip = new JSZip();
-    const total = processedResults.length;
+    const exportedCategories = [];
 
-    for (let i = 0; i < total; i++) {
-      const r = processedResults[i];
-      const root = zip.folder(`MyFamily_${r.subFolder}`);
-      const imgFolder = root.folder('images');
-      const labelFolder = root.folder('back_labels');
-
-      if (r.imgBlobs.main) {
-        imgFolder.file(`main_${r.skuStr}.jpg`, r.imgBlobs.main);
-        if (r.imgBlobs.sc1) imgFolder.file(`sc1_${r.skuStr}.jpg`, r.imgBlobs.sc1);
-        if (r.imgBlobs.sc2) imgFolder.file(`sc2_${r.skuStr}.jpg`, r.imgBlobs.sc2);
+    // 胸背帶 (僅在有資料時打包)
+    const hData = filesToExport['胸背帶'];
+    if (harnessCount > 0 || harnessExcelBuffer || hData.images.size > 0 || hData.back_labels.size > 0) {
+      exportedCategories.push('胸背帶');
+      const root = zip.folder('胸背帶');
+      if (harnessExcelBuffer) {
+        root.file('商品報價單_胸背帶_auto_generate.xlsx', harnessExcelBuffer);
       }
-      if (r.imgBlobs.chart) {
-        imgFolder.file(`chart_${r.skuStr}.jpg`, r.imgBlobs.chart);
+      if (hData.images.size > 0) {
+        const imgFolder = root.folder('images');
+        for (const [filename, blob] of hData.images.entries()) {
+          imgFolder.file(filename, blob);
+        }
       }
-      if (r.imgBlobs.label) {
-        labelFolder.file(`label_${r.skuStr}.jpg`, r.imgBlobs.label);
+      if (hData.back_labels.size > 0) {
+        const labelFolder = root.folder('back_labels');
+        for (const [filename, blob] of hData.back_labels.entries()) {
+          labelFolder.file(filename, blob);
+        }
       }
     }
 
-    if (harnessExcelBuffer) zip.folder('MyFamily_胸背帶').file('商品報價單_胸背帶_auto_generate.xlsx', harnessExcelBuffer);
-    if (leashExcelBuffer) zip.folder('MyFamily_項圈牽繩').file('商品報價單_項圈 牽繩_auto_generate.xlsx', leashExcelBuffer);
+    // 項圈牽繩 (僅在有資料時打包)
+    const lData = filesToExport['項圈牽繩'];
+    if (leashCount > 0 || leashExcelBuffer || lData.images.size > 0 || lData.back_labels.size > 0) {
+      exportedCategories.push('項圈牽繩');
+      const root = zip.folder('項圈牽繩');
+      if (leashExcelBuffer) {
+        root.file('商品報價單_項圈 牽繩_auto_generate.xlsx', leashExcelBuffer);
+      }
+      if (lData.images.size > 0) {
+        const imgFolder = root.folder('images');
+        for (const [filename, blob] of lData.images.entries()) {
+          imgFolder.file(filename, blob);
+        }
+      }
+      if (lData.back_labels.size > 0) {
+        const labelFolder = root.folder('back_labels');
+        for (const [filename, blob] of lData.back_labels.entries()) {
+          labelFolder.file(filename, blob);
+        }
+      }
+    }
+
+    if (exportedCategories.length === 0) {
+      alert('無可供匯出的資料！');
+      return;
+    }
 
     setProgress(50, '正在壓縮...');
-    const blob = await zip.generateAsync({type: "blob"});
+    const blob = await zip.generateAsync({ type: "blob" });
     setProgress(100, 'ZIP 打包完成！正在下載...');
-    saveAs(blob, `MyFamily_Output_${new Date().toISOString().slice(0,10)}.zip`);
-    logMessage('ZIP 檔案已下載', 'success');
+    const filenameSuffix = exportedCategories.join('_');
+    saveAs(blob, `MyFamily_Output_${filenameSuffix}_${new Date().toISOString().slice(0, 10)}.zip`);
+    logMessage(`ZIP 檔案已下載（包含：${exportedCategories.join('、')}）`, 'success');
   });
 });
