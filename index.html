@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Family 報價單與圖片批量生成系統</title>
+  <!-- Google Fonts: Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- XlsxPopulate for reading/writing Excel while preserving all metadata/styles -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-populate@1.21.0/browser/xlsx-populate.min.js"></script>
+  <!-- JSZip for packaging output files -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <!-- FileSaver for browser file downloads -->
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-brand">
+        <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <div>
+          <h1>My Family 報價單與圖片生成系統</h1>
+          <p class="subtitle">讀取來源 Excel 與商品圖庫，自動產生標準報價單及處理後圖片 ZIP</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btnDownloadSample" class="btn btn-secondary">下載範例資料夾結構</button>
+        <button id="btnOpenConfig" class="btn btn-outline">對照表設定</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <section class="panel-section">
+        <!-- 檔案上傳區 -->
+        <div class="drop-zone-container">
+          <!-- Excel 拖放區 -->
+          <div class="drop-zone" id="excelDropZone">
+            <input type="file" id="excelInput" accept=".xlsx, .xls" hidden>
+            <div class="drop-zone-content">
+              <h3>拖曳來源 Excel (`to team_My Family...`) 至此處</h3>
+              <p class="file-hint">或 <span class="browse-link">點擊選取檔案</span></p>
+              <div id="excelFileInfo" class="file-info hidden"></div>
+            </div>
+          </div>
+
+          <!-- 照片資料夾選擇區 -->
+          <div class="drop-zone" id="photoDirZone" style="cursor: pointer;">
+            <!-- webkitdirectory allows selecting a folder -->
+            <input type="file" id="photoDirInput" webkitdirectory directory hidden>
+            <div class="drop-zone-content">
+              <h3>點擊選擇本機 My Family 照片資料夾 (`Photo/`)</h3>
+              <p class="file-hint">請確保資料夾內含各商品圖，系統會自動在瀏覽器內比對</p>
+              <div id="photoDirInfo" class="file-info hidden"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 執行操作區 -->
+        <div class="action-panel">
+          <button id="btnStartProcess" class="btn btn-primary btn-large" disabled>開始處理</button>
+        </div>
+      </section>
+
+      <!-- 進度與診斷區 -->
+      <section id="resultSection" class="result-section hidden">
+        <h2 class="section-title">處理進度與診斷結果</h2>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-title">符合條件 SKU 總數</div>
+            <div class="stat-value" id="statTotalSku">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">已成功配對圖片</div>
+            <div class="stat-value success" id="statMatchedImages">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">找不到圖片 (警告)</div>
+            <div class="stat-value warning" id="statMissingImages">0</div>
+          </div>
+        </div>
+
+        <div id="progressContainer" class="progress-container hidden">
+          <div class="progress-info">
+            <span id="progressText">處理中...</span>
+            <span id="progressPercent">0%</span>
+          </div>
+          <div class="progress-track">
+            <div id="progressBar" class="progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="btnSaveToFolder" class="btn btn-primary" disabled>一鍵存入資料夾 (推薦)</button>
+          <button id="btnDownloadZip" class="btn btn-secondary" disabled>打包下載 ZIP (.zip)</button>
+        </div>
+
+        <div class="log-panel">
+          <h3>系統訊息</h3>
+          <ul id="logList" class="log-list">
+            <li class="log-item info">等待操作...</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal: 對照表設定編輯器 -->
+    <div id="configModal" class="modal-overlay hidden">
+      <div class="modal-card config-modal">
+        <div class="modal-header">
+          <h3 class="modal-title">對照表與設定 (Config & Mapping Manager)</h3>
+          <button id="configModalClose" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-content">
+          <div class="tabs">
+            <button class="tab-btn active" data-target="tabConfig">config.json (欄位對照)</button>
+            <button class="tab-btn" data-target="tabCollection">系列中英對照設定</button>
+            <button class="tab-btn" data-target="tabColor">顏色別名設定</button>
+            <button class="tab-btn" data-target="tabTemplate">模板設定 (Excel)</button>
+          </div>
+          <div class="tab-content active" id="tabConfig">
+            <div id="guiConfigForm" class="gui-form"></div>
+          </div>
+          <div class="tab-content" id="tabCollection">
+            <p class="tab-desc">設定資料夾系列英文字眼與品名中文系列名的對應。當載入照片資料夾或 Excel 時，系統會自動掃描並填入對應關係；您亦可在此手動調整。</p>
+            <div id="guiCollectionForm" class="gui-form"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+              <button id="btnAddCollection" class="btn btn-outline btn-sm">+ 新增系列對照</button>
+              <button id="btnRescanCollection" class="btn btn-secondary btn-sm" style="font-size:0.8rem;">🔄 重新從目前檔案自動掃描對照</button>
+            </div>
+          </div>
+          <div class="tab-content" id="tabColor">
+            <p class="tab-desc">設定資料夾顏色字眼與 Excel 顏色的對應。當載入照片資料夾或 Excel (含 COLOR 欄位) 時，系統會自動掃描並建立中文別名對照；您亦可在此手動調整。</p>
+            <div id="guiColorForm" class="gui-form"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+              <button id="btnAddColor" class="btn btn-outline btn-sm">+ 新增顏色群組</button>
+              <button id="btnRescanColor" class="btn btn-secondary btn-sm" style="font-size:0.8rem;">🔄 重新從目前檔案自動掃描對照</button>
+            </div>
+          </div>
+          <div class="tab-content" id="tabTemplate">
+            <p class="tab-desc">更新內建的 Excel 模板。選擇新檔案後點擊儲存，下次處理即會使用新模板。</p>
+            <div style="margin-bottom:15px;">
+              <label><strong>商品報價單_胸背帶 模板:</strong></label><br/>
+              <input type="file" id="templateHarnessInput" accept=".xlsx" style="margin-top:5px; margin-bottom:10px;">
+              <div id="templateHarnessStatus" style="color:green; font-size:12px;">已套用預設模板</div>
+            </div>
+            <div>
+              <label><strong>商品報價單_項圈 牽繩 模板:</strong></label><br/>
+              <input type="file" id="templateLeashInput" accept=".xlsx" style="margin-top:5px; margin-bottom:10px;">
+              <div id="templateLeashStatus" style="color:green; font-size:12px;">已套用預設模板</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="btnResetConfig" class="btn btn-outline">還原為系統預設值</button>
+          <button id="btnSaveConfig" class="btn btn-primary">儲存設定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/templates.js"></script>
+  <script src="js/default_config.js"></script>
+  <script src="js/image_utils.js"></script>
+  <script src="js/my_family_processor.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
