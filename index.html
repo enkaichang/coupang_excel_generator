@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Family 報價單與圖片批量生成系統 v1.2.0</title>
+  <title>酷澎報價單與圖片批量生成系統 v1.4.2</title>
   <!-- Google Fonts: Noto Sans TC -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   
   <!-- XlsxPopulate for reading/writing Excel while preserving all metadata/styles -->
@@ -30,8 +30,8 @@
         </svg>
         <div>
           <div style="display: flex; align-items: center; gap: 10px;">
-            <h1>My Family 報價單與圖片生成系統</h1>
-            <span class="version-badge">v1.2.0</span>
+            <h1>酷澎報價單與圖片生成系統</h1>
+            <span class="version-badge">v1.4.2</span>
           </div>
           <p class="subtitle">讀取來源 Excel 與商品圖庫，自動產生標準報價單及處理後圖片 ZIP</p>
         </div>
@@ -50,7 +50,7 @@
           <div class="drop-zone" id="excelDropZone">
             <input type="file" id="excelInput" accept=".xlsx, .xls" hidden>
             <div class="drop-zone-content">
-              <h3>拖曳來源 Excel (`to team_My Family...`) 至此處</h3>
+              <h3>拖曳來源 Excel (`.xlsx`, `.xls`) 至此處</h3>
               <p class="file-hint">或 <span class="browse-link">點擊選取檔案</span></p>
               <div id="excelFileInfo" class="file-info hidden"></div>
             </div>
@@ -61,11 +61,38 @@
             <!-- webkitdirectory allows selecting a folder -->
             <input type="file" id="photoDirInput" webkitdirectory directory hidden>
             <div class="drop-zone-content">
-              <h3>點擊選擇本機 My Family 照片資料夾 (`Photo/`)</h3>
+              <h3>點擊選擇本機商品照片資料夾 (`Photo/`)</h3>
               <p class="file-hint">請確保資料夾內含各商品圖，系統會自動在瀏覽器內比對</p>
               <div id="photoDirInfo" class="file-info hidden"></div>
             </div>
           </div>
+        </div>
+
+        <!-- 來源處理範圍設定 -->
+        <div class="range-config-bar">
+          <div class="range-inputs">
+            <span class="range-label">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              處理範圍設定（列號）：
+            </span>
+            <div class="range-field">
+              <label for="inputRowStart">起始列</label>
+              <input type="number" id="inputRowStart" min="1" placeholder="例如: 4" value="4">
+            </div>
+            <div class="range-field">
+              <label for="inputRowEnd">結束列</label>
+              <input type="number" id="inputRowEnd" min="1" placeholder="留空 = 處理至結尾">
+            </div>
+            <button type="button" id="btnResetRange" class="btn btn-outline btn-sm" title="重置為處理全部列">全部</button>
+          </div>
+          <div id="rangeInfoHint" class="range-hint">尚未載入來源 Excel</div>
         </div>
 
         <!-- 執行操作區 -->
@@ -117,6 +144,10 @@
       </section>
     </main>
 
+    <footer class="app-footer">
+      <p>Powered By Enkai Chang</p>
+    </footer>
+
     <!-- Modal: 對照表設定編輯器 -->
     <div id="configModal" class="modal-overlay hidden">
       <div class="modal-card config-modal">
@@ -127,12 +158,20 @@
         <div class="modal-content">
           <div class="tabs">
             <button class="tab-btn active" data-target="tabConfig">config.json (欄位對照)</button>
+            <button class="tab-btn" data-target="tabCategoryRule">品類與分類代碼設定</button>
             <button class="tab-btn" data-target="tabCollection">系列中英對照設定</button>
             <button class="tab-btn" data-target="tabColor">顏色別名設定</button>
             <button class="tab-btn" data-target="tabTemplate">模板設定 (Excel)</button>
           </div>
           <div class="tab-content active" id="tabConfig">
             <div id="guiConfigForm" class="gui-form"></div>
+          </div>
+          <div class="tab-content" id="tabCategoryRule">
+            <p class="tab-desc">自訂品類判定規則。系統將依據來源 TYPE 欄位或中文品名關鍵字，動態決定套用的 Excel 模板種類、酷澎細分分類代碼及輸出子資料夾。</p>
+            <div id="guiCategoryRuleForm" class="gui-form"></div>
+            <div style="display:flex; justify-content:flex-start; align-items:center; margin-top:12px;">
+              <button id="btnAddCategoryRule" class="btn btn-outline btn-sm">+ 新增品類判定規則</button>
+            </div>
           </div>
           <div class="tab-content" id="tabCollection">
             <p class="tab-desc">設定資料夾系列英文字眼與品名中文系列名的對應。當載入照片資料夾或 Excel 時，系統會自動掃描並填入對應關係；您亦可在此手動調整。</p>

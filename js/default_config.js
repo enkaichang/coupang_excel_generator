@@ -2,8 +2,8 @@ window.AppConfig = {
   getDefaultConfig: function() {
     return {
       source: {
-        file_path: "My Family.xlsx",
-        sheet_name: "MYFAMILY",
+        file_path: "商品資料.xlsx",
+        sheet_name: "Sheet1",
         header_row: 3,
         row_start: 4,
         filter_column: "中文背標"
@@ -12,8 +12,6 @@ window.AppConfig = {
         dynamic: {
           "商品名稱": "中文品名",
           "商品條碼": "EAN",
-          "顏色": "COLOR",
-          "尺寸": "SIZE",
           "酷澎進價 (含稅)": "酷澎進價",
           "建議酷澎售價": "台灣訂價",
           "每單位包裝尺寸(mm)": "每單位包裝尺寸\n(mm)",
@@ -21,14 +19,14 @@ window.AppConfig = {
         },
         fixed: {
           "細分商品種類": "寵物用品>犬貓通用>項圈/伸縮牽繩>項圈 (66025)",
-          "品牌": "義大利 My Family",
+          "品牌": "",
           "數量": "1個",
           "包裝上方\n(內部上架審核用)": "嚴正聲明-本商品無外包裝照片",
           "包裝下方\n(內部上架審核用)": "嚴正聲明-本商品無外包裝照片",
           "包裝左側\n(內部上架審核用)": "嚴正聲明-本商品無外包裝照片",
           "包裝右側\n(內部上架審核用)": "嚴正聲明-本商品無外包裝照片",
           "是否應稅": "應稅(5%)",
-          "製造廠商": "義大利 My Family",
+          "製造廠商": "",
           "供貨方式": "官方代理商",
           "是否為進口商品": "進口商品",
           "單箱商品入數": "1",
@@ -75,16 +73,20 @@ window.AppConfig = {
     };
   },
   get: function() {
-    const saved = localStorage.getItem('my_family_config');
+    const saved = localStorage.getItem('coupang_config') || localStorage.getItem('my_family_config');
     const def = this.getDefaultConfig();
     if (!saved) return def;
     try {
       const parsed = JSON.parse(saved);
+      const dyn = { ...def.field_mappings.dynamic, ...(parsed.field_mappings?.dynamic || {}) };
+      // 確保顏色與尺寸預設一律由中文品名解析填入
+      if (dyn['顏色'] === 'COLOR') delete dyn['顏色'];
+      if (dyn['尺寸'] === 'SIZE') delete dyn['尺寸'];
       return {
         source: { ...def.source, ...(parsed.source || {}) },
         field_mappings: {
           fixed: { ...def.field_mappings.fixed, ...(parsed.field_mappings?.fixed || {}) },
-          dynamic: { ...def.field_mappings.dynamic, ...(parsed.field_mappings?.dynamic || {}) }
+          dynamic: dyn
         }
       };
     } catch (e) {
@@ -92,12 +94,50 @@ window.AppConfig = {
     }
   },
   getCollectionAliases: function() {
-    const saved = localStorage.getItem('my_family_collection_aliases');
+    const saved = localStorage.getItem('coupang_collection_aliases') || localStorage.getItem('my_family_collection_aliases');
     return saved ? JSON.parse(saved) : this.getDefaultCollectionAliases();
   },
   getColorAliases: function() {
-    const saved = localStorage.getItem('my_family_color_aliases');
+    const saved = localStorage.getItem('coupang_color_aliases') || localStorage.getItem('my_family_color_aliases');
     return saved ? JSON.parse(saved) : this.getDefaultColorAliases();
+  },
+  getDefaultCategoryRules: function() {
+    return [
+      {
+        name: '胸背帶',
+        keywords: ['HARNESS', '胸背帶', '背帶'],
+        template_type: 'HARNESS',
+        template_name: '商品報價單_胸背帶.xlsx',
+        category_name: '寵物用品>狗用品>牽繩/胸背帶>胸背帶 (66030)',
+        subfolder: '胸背帶'
+      },
+      {
+        name: '牽繩',
+        keywords: ['LEASH', '牽繩'],
+        template_type: 'LEASH',
+        template_name: '商品報價單_項圈 牽繩.xlsx',
+        category_name: '寵物用品>犬貓通用>項圈/伸縮牽繩>牽繩 (66027)',
+        subfolder: '項圈牽繩'
+      },
+      {
+        name: '項圈',
+        keywords: ['COLLAR', '項圈'],
+        template_type: 'LEASH',
+        template_name: '商品報價單_項圈 牽繩.xlsx',
+        category_name: '寵物用品>犬貓通用>項圈/伸縮牽繩>項圈 (66025)',
+        subfolder: '項圈牽繩'
+      }
+    ];
+  },
+  getCategoryRules: function() {
+    const saved = localStorage.getItem('coupang_category_rules') || localStorage.getItem('my_family_category_rules');
+    if (!saved) return this.getDefaultCategoryRules();
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : this.getDefaultCategoryRules();
+    } catch(e) {
+      return this.getDefaultCategoryRules();
+    }
   },
   zhColorMap: [
     ['蘋果綠', ['APPLE GREEN']],

@@ -43,6 +43,36 @@ window.ImageUtils = {
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, newW, newH);
       
+    });
+  },
+
+  resizeAndPad: function(img, targetW = 1000, targetH = 1000, padColor = '#FFFFFF') {
+    return new Promise((resolve) => {
+      const w = img.width;
+      const h = img.height;
+
+      // Calculate scale ratio to fit within targetW and targetH
+      const ratio = Math.min(targetW / w, targetH / h);
+      const newW = Math.round(w * ratio);
+      const newH = Math.round(h * ratio);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+
+      // Fill with padColor
+      ctx.fillStyle = padColor;
+      ctx.fillRect(0, 0, targetW, targetH);
+
+      // Draw image centered
+      const x = (targetW - newW) / 2;
+      const y = (targetH - newH) / 2;
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, x, y, newW, newH);
+
       canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95);
     });
   }

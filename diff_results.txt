@@ -1,0 +1,1062 @@
+
+--- Comparing [Content_Types].xml ---
+--- generated
+
++++ excel_saved
+
+@@ -1,14 +1,15 @@
+
+ <?xml version="1.0" ?>
+ <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+-  <Default ContentType="application/vnd.openxmlformats-package.relationships+xml" Extension="rels"/>
+-  <Default ContentType="application/xml" Extension="xml"/>
+-  <Override ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml" PartName="/docProps/app.xml"/>
+-  <Override ContentType="application/vnd.openxmlformats-package.core-properties+xml" PartName="/docProps/core.xml"/>
+-  <Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml" PartName="/xl/sharedStrings.xml"/>
+-  <Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml" PartName="/xl/styles.xml"/>
+-  <Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml" PartName="/xl/workbook.xml"/>
+-  <Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml" PartName="/xl/worksheets/sheet1.xml"/>
+-  <Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml" PartName="/xl/worksheets/sheet2.xml"/>
+-  <Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml" PartName="/xl/worksheets/sheet3.xml"/>
+-  <Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml" PartName="/xl/worksheets/sheet4.xml"/>
++  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
++  <Default Extension="xml" ContentType="application/xml"/>
++  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
++  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
++  <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
++  <Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
++  <Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
++  <Override PartName="/xl/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
++  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
++  <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
++  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
++  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+ </Types>
+
+--- Comparing xl/workbook.xml ---
+--- generated
+
++++ excel_saved
+
+@@ -1,19 +1,33 @@
+
+ <?xml version="1.0" ?>
+-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+-  <workbookPr date1904="false"/>
++<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x15="http://schemas.microsoft.com/office/spreadsheetml/2010/11/main" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xmlns:xr6="http://schemas.microsoft.com/office/spreadsheetml/2016/revision6" xmlns:xr10="http://schemas.microsoft.com/office/spreadsheetml/2016/revision10" xmlns:xr2="http://schemas.microsoft.com/office/spreadsheetml/2015/revision2" mc:Ignorable="x15 xr xr6 xr10 xr2">
++  <fileVersion appName="xl" lastEdited="7" lowestEdited="7" rupBuild="27932"/>
++  <workbookPr defaultThemeVersion="202300"/>
++  <mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
++    <mc:Choice Requires="x15">
++      <x15ac:absPath xmlns:x15ac="http://schemas.microsoft.com/office/spreadsheetml/2010/11/ac" url="C:\Users\kasen\Downloads\新增資料夾 (10)\項圈牽繩\"/>
++    </mc:Choice>
++  </mc:AlternateContent>
++  <xr:revisionPtr revIDLastSave="0" documentId="8_{A14B8B99-3FE2-40CD-AEC8-8BDF5725987A}" xr6:coauthVersionLast="47" xr6:coauthVersionMax="47" xr10:uidLastSave="{00000000-0000-0000-0000-000000000000}"/>
+   <bookViews>
+-    <workbookView activeTab="1"/>
++    <workbookView xWindow="1905" yWindow="1905" windowWidth="21600" windowHeight="11295" activeTab="1" xr2:uid="{00000000-000D-0000-FFFF-FFFF00000000}"/>
+   </bookViews>
+   <sheets>
+-    <sheet name="上傳須知" r:id="rId3" sheetId="1"/>
+-    <sheet name="QF_5485_犬隻用品_外出設備_狗帶-項圈" r:id="rId4" sheetId="2"/>
+-    <sheet name="HQF_405_5485" r:id="rId5" sheetId="3" state="hidden"/>
+-    <sheet name="TW_General(405)" r:id="rId6" sheetId="4"/>
++    <sheet name="上傳須知" sheetId="1" r:id="rId1"/>
++    <sheet name="QF_5485_犬隻用品_外出設備_狗帶-項圈" sheetId="2" r:id="rId2"/>
++    <sheet name="HQF_405_5485" sheetId="3" state="hidden" r:id="rId3"/>
++    <sheet name="TW_General(405)" sheetId="4" r:id="rId4"/>
+   </sheets>
+   <definedNames>
++    <definedName name="_5485_additionalImage5_28">HQF_405_5485!$AC$2:$AC$2</definedName>
++    <definedName name="_5485_additionalImage6_29">HQF_405_5485!$AD$2:$AD$2</definedName>
++    <definedName name="_5485_additionalImage7_30">HQF_405_5485!$AE$2:$AE$2</definedName>
++    <definedName name="_5485_additionalImage8_31">HQF_405_5485!$AF$2:$AF$2</definedName>
++    <definedName name="_5485_businessType_45">HQF_405_5485!$AT$2:$AT$5</definedName>
+     <definedName name="_5485_categoryPath_1">HQF_405_5485!$B$2:$B$4</definedName>
++    <definedName name="_5485_importType_46">HQF_405_5485!$AU$2:$AU$4</definedName>
+     <definedName name="_5485_productBarcode_3">HQF_405_5485!$D$2:$D$2</definedName>
+-    <definedName name="_5485_unexposedAttributes_9">HQF_405_5485!$J$2:$J$2</definedName>
++    <definedName name="_5485_specialHandlingReason_49">HQF_405_5485!$AX$2:$AX$3</definedName>
++    <definedName name="_5485_taxationSchema_43">HQF_405_5485!$AR$2:$AR$4</definedName>
+     <definedName name="_5485_unexposedAttributes_10">HQF_405_5485!$K$2:$K$10</definedName>
+     <definedName name="_5485_unexposedAttributes_12">HQF_405_5485!$M$2:$M$18</definedName>
+     <definedName name="_5485_unexposedAttributes_13">HQF_405_5485!$N$2:$N$2</definedName>
+@@ -23,13 +37,12 @@
+
+     <definedName name="_5485_unexposedAttributes_17">HQF_405_5485!$R$2:$R$2</definedName>
+     <definedName name="_5485_unexposedAttributes_18">HQF_405_5485!$S$2:$S$5</definedName>
+     <definedName name="_5485_unexposedAttributes_19">HQF_405_5485!$T$2:$T$3</definedName>
+-    <definedName name="_5485_additionalImage5_28">HQF_405_5485!$AC$2:$AC$2</definedName>
+-    <definedName name="_5485_additionalImage6_29">HQF_405_5485!$AD$2:$AD$2</definedName>
+-    <definedName name="_5485_additionalImage7_30">HQF_405_5485!$AE$2:$AE$2</definedName>
+-    <definedName name="_5485_additionalImage8_31">HQF_405_5485!$AF$2:$AF$2</definedName>
+-    <definedName name="_5485_taxationSchema_43">HQF_405_5485!$AR$2:$AR$4</definedName>
+-    <definedName name="_5485_businessType_45">HQF_405_5485!$AT$2:$AT$5</definedName>
+-    <definedName name="_5485_importType_46">HQF_405_5485!$AU$2:$AU$4</definedName>
+-    <definedName name="_5485_specialHandlingReason_49">HQF_405_5485!$AX$2:$AX$3</definedName>
++    <definedName name="_5485_unexposedAttributes_9">HQF_405_5485!$J$2:$J$2</definedName>
+   </definedNames>
++  <calcPr calcId="0"/>
++  <extLst>
++    <ext xmlns:xlwcv="http://schemas.microsoft.com/office/spreadsheetml/2024/workbookCompatibilityVersion" uri="{D14903EA-33C4-47F7-8F05-3474C54BE107}">
++      <xlwcv:version setVersion="1"/>
++    </ext>
++  </extLst>
+ </workbook>
+
+--- Comparing xl/worksheets/sheet1.xml ---
+--- generated
+
++++ excel_saved
+
+@@ -1,43 +1,35 @@
+
+ <?xml version="1.0" ?>
+-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+-  <sheetPr/>
++<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xmlns:xr2="http://schemas.microsoft.com/office/spreadsheetml/2015/revision2" xmlns:xr3="http://schemas.microsoft.com/office/spreadsheetml/2016/revision3" mc:Ignorable="x14ac xr xr2 xr3" xr:uid="{00000000-0001-0000-0000-000000000000}">
+   <dimension ref="A1:P67"/>
+   <sheetViews>
+-    <sheetView workbookViewId="0" tabSelected="false" zoomScale="70"/>
++    <sheetView zoomScale="70" workbookViewId="0"/>
+   </sheetViews>
+-  <sheetFormatPr defaultRowHeight="15.0"/>
++  <sheetFormatPr defaultColWidth="8" defaultRowHeight="15" x14ac:dyDescent="0.25"/>
+   <cols>
+-    <col min="1" max="1" style="1" width="2.83203125" customWidth="true"/>
+-    <col min="2" max="2" style="1" width="22.1640625" customWidth="true"/>
+-    <col min="3" max="3" style="1" width="27.83203125" customWidth="true"/>
+-    <col min="4" max="4" style="1" width="72.5" customWidth="true"/>
+-    <col min="5" max="5" style="1" width="22.33203125" customWidth="true"/>
+-    <col min="6" max="6" style="1" width="10.83203125" customWidth="true"/>
+-    <col min="7" max="7" style="1" width="10.83203125" customWidth="true"/>
+-    <col min="8" max="8" style="1" width="10.83203125" customWidth="true"/>
+-    <col min="9" max="9" style="1" width="10.83203125" customWidth="true"/>
+-    <col min="10" max="10" style="1" width="20.5" customWidth="true"/>
+-    <col min="11" max="11" style="1" width="39.0" customWidth="true"/>
+-    <col min="12" max="12" style="1" width="10.83203125" customWidth="true"/>
+-    <col min="13" max="13" style="1" width="10.83203125" customWidth="true"/>
+-    <col min="14" max="14" style="1" width="10.83203125" customWidth="true"/>
+-    <col min="15" max="15" style="1" width="10.83203125" customWidth="true"/>
+-    <col min="16" max="16" style="1" width="10.83203125" customWidth="true"/>
+-    <col min="17" max="17" style="1" width="10.0" customWidth="true"/>
+-    <col min="18" max="16384" style="1" width="8.0" customWidth="false"/>
++    <col min="1" max="1" width="2.85546875" style="1" customWidth="1"/>
++    <col min="2" max="2" width="22.140625" style="1" customWidth="1"/>
++    <col min="3" max="3" width="27.85546875" style="1" customWidth="1"/>
++    <col min="4" max="4" width="72.42578125" style="1" customWidth="1"/>
++    <col min="5" max="5" width="22.28515625" style="1" customWidth="1"/>
++    <col min="6" max="9" width="10.85546875" style="1" customWidth="1"/>
++    <col min="10" max="10" width="20.42578125" style="1" customWidth="1"/>
++    <col min="11" max="11" width="39" style="1" customWidth="1"/>
++    <col min="12" max="16" width="10.85546875" style="1" customWidth="1"/>
++    <col min="17" max="17" width="10" style="1" customWidth="1"/>
++    <col min="18" max="16384" width="8" style="1"/>
+   </cols>
+   <sheetData>
+-    <row r="1" ht="16.0" customHeight="true">
++    <row r="1" spans="1:16" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E1" s="2"/>
+     </row>
+-    <row r="2" ht="31.0" customHeight="true">
++    <row r="2" spans="1:16" ht="30.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A2" s="3"/>
+-      <c r="B2" t="s" s="4">
++      <c r="B2" s="70" t="s">
+         <v>0</v>
+       </c>
+-      <c r="C2" s="4"/>
+-      <c r="D2" s="4"/>
+-      <c r="E2" s="4"/>
++      <c r="C2" s="70"/>
++      <c r="D2" s="70"/>
++      <c r="E2" s="70"/>
+       <c r="F2" s="3"/>
+       <c r="G2" s="3"/>
+       <c r="H2" s="3"/>
+@@ -50,14 +42,14 @@
+
+       <c r="O2" s="3"/>
+       <c r="P2" s="3"/>
+     </row>
+-    <row r="3" ht="56.0" customHeight="true">
++    <row r="3" spans="1:16" ht="56.1" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A3" s="3"/>
+-      <c r="B3" t="s" s="5">
++      <c r="B3" s="71" t="s">
+         <v>1</v>
+       </c>
+-      <c r="C3" s="5"/>
+-      <c r="D3" s="5"/>
+-      <c r="E3" s="5"/>
++      <c r="C3" s="71"/>
++      <c r="D3" s="71"/>
++      <c r="E3" s="71"/>
+       <c r="F3" s="3"/>
+       <c r="G3" s="3"/>
+       <c r="H3" s="3"/>
+@@ -70,18 +62,18 @@
+
+       <c r="O3" s="3"/>
+       <c r="P3" s="3"/>
+     </row>
+-    <row r="4" ht="23.0" customHeight="true">
+-      <c r="D4" s="6"/>
++    <row r="4" spans="1:16" ht="23.1" customHeight="1" x14ac:dyDescent="0.25">
++      <c r="D4" s="4"/>
+       <c r="E4" s="2"/>
+     </row>
+-    <row r="5" ht="31.0" customHeight="true">
++    <row r="5" spans="1:16" ht="30.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A5" s="3"/>
+-      <c r="B5" t="s" s="7">
++      <c r="B5" s="72" t="s">
+         <v>2</v>
+       </c>
+-      <c r="C5" s="7"/>
+-      <c r="D5" s="7"/>
+-      <c r="E5" s="8"/>
++      <c r="C5" s="72"/>
++      <c r="D5" s="72"/>
++      <c r="E5" s="73"/>
+       <c r="F5" s="3"/>
+       <c r="G5" s="3"/>
+       <c r="H5" s="3"/>
+@@ -94,16 +86,16 @@
+
+       <c r="O5" s="3"/>
+       <c r="P5" s="3"/>
+     </row>
+-    <row r="6" ht="24.0" customHeight="true">
++    <row r="6" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A6" s="3"/>
+-      <c r="B6" t="s" s="9">
++      <c r="B6" s="5" t="s">
+         <v>3</v>
+       </c>
+-      <c r="C6" t="s" s="10">
++      <c r="C6" s="74" t="s">
+         <v>4</v>
+       </c>
+-      <c r="D6" s="11"/>
+-      <c r="E6" s="12"/>
++      <c r="D6" s="75"/>
++      <c r="E6" s="76"/>
+       <c r="F6" s="3"/>
+       <c r="G6" s="3"/>
+       <c r="H6" s="3"/>
+@@ -116,16 +108,16 @@
+
+       <c r="O6" s="3"/>
+       <c r="P6" s="3"/>
+     </row>
+-    <row r="7" ht="24.0" customHeight="true">
++    <row r="7" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A7" s="3"/>
+-      <c r="B7" t="s" s="9">
++      <c r="B7" s="5" t="s">
+         <v>5</v>
+       </c>
+-      <c r="C7" t="s" s="10">
++      <c r="C7" s="74" t="s">
+         <v>6</v>
+       </c>
+-      <c r="D7" s="11"/>
+-      <c r="E7" s="12"/>
++      <c r="D7" s="75"/>
++      <c r="E7" s="76"/>
+       <c r="F7" s="3"/>
+       <c r="G7" s="3"/>
+       <c r="H7" s="3"/>
+@@ -138,16 +130,16 @@
+
+       <c r="O7" s="3"/>
+       <c r="P7" s="3"/>
+     </row>
+-    <row r="8" ht="24.0" customHeight="true">
++    <row r="8" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A8" s="3"/>
+-      <c r="B8" t="s" s="9">
++      <c r="B8" s="5" t="s">
+         <v>7</v>
+       </c>
+-      <c r="C8" t="s" s="10">
++      <c r="C8" s="74" t="s">
+         <v>8</v>
+       </c>
+-      <c r="D8" s="11"/>
+-      <c r="E8" s="12"/>
++      <c r="D8" s="75"/>
++      <c r="E8" s="76"/>
+       <c r="F8" s="3"/>
+       <c r="G8" s="3"/>
+       <c r="H8" s="3"/>
+@@ -160,16 +152,16 @@
+
+       <c r="O8" s="3"/>
+       <c r="P8" s="3"/>
+     </row>
+-    <row r="9" ht="24.0" customHeight="true">
++    <row r="9" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A9" s="3"/>
+-      <c r="B9" t="s" s="9">
++      <c r="B9" s="5" t="s">
+         <v>9</v>
+       </c>
+-      <c r="C9" t="s" s="10">
++      <c r="C9" s="74" t="s">
+         <v>10</v>
+       </c>
+-      <c r="D9" s="11"/>
+-      <c r="E9" s="12"/>
++      <c r="D9" s="75"/>
++      <c r="E9" s="76"/>
+       <c r="F9" s="3"/>
+       <c r="G9" s="3"/>
+       <c r="H9" s="3"/>
+@@ -182,16 +174,16 @@
+
+       <c r="O9" s="3"/>
+       <c r="P9" s="3"/>
+     </row>
+-    <row r="10" ht="24.0" customHeight="true">
++    <row r="10" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A10" s="3"/>
+-      <c r="B10" t="s" s="9">
++      <c r="B10" s="5" t="s">
+         <v>11</v>
+       </c>
+-      <c r="C10" t="s" s="10">
++      <c r="C10" s="74" t="s">
+         <v>12</v>
+       </c>
+-      <c r="D10" s="11"/>
+-      <c r="E10" s="12"/>
++      <c r="D10" s="75"/>
++      <c r="E10" s="76"/>
+       <c r="F10" s="3"/>
+       <c r="G10" s="3"/>
+       <c r="H10" s="3"/>
+@@ -204,16 +196,16 @@
+
+       <c r="O10" s="3"/>
+       <c r="P10" s="3"/>
+     </row>
+-    <row r="11" ht="24.0" customHeight="true">
++    <row r="11" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A11" s="3"/>
+-      <c r="B11" t="s" s="9">
++      <c r="B11" s="5" t="s">
+         <v>13</v>
+       </c>
+-      <c r="C11" t="s" s="10">
++      <c r="C11" s="74" t="s">
+         <v>14</v>
+       </c>
+-      <c r="D11" s="11"/>
+-      <c r="E11" s="12"/>
++      <c r="D11" s="75"/>
++      <c r="E11" s="76"/>
+       <c r="F11" s="3"/>
+       <c r="G11" s="3"/>
+       <c r="H11" s="3"/>
+@@ -226,16 +218,16 @@
+
+       <c r="O11" s="3"/>
+       <c r="P11" s="3"/>
+     </row>
+-    <row r="12" ht="24.0" customHeight="true">
++    <row r="12" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A12" s="3"/>
+-      <c r="B12" t="s" s="9">
++      <c r="B12" s="5" t="s">
+         <v>15</v>
+       </c>
+-      <c r="C12" t="s" s="10">
++      <c r="C12" s="74" t="s">
+         <v>16</v>
+       </c>
+-      <c r="D12" s="11"/>
+-      <c r="E12" s="12"/>
++      <c r="D12" s="75"/>
++      <c r="E12" s="76"/>
+       <c r="F12" s="3"/>
+       <c r="G12" s="3"/>
+       <c r="H12" s="3"/>
+@@ -248,17 +240,17 @@
+
+       <c r="O12" s="3"/>
+       <c r="P12" s="3"/>
+     </row>
+-    <row r="13" ht="23.0" customHeight="true">
++    <row r="13" spans="1:16" ht="23.1" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E13" s="2"/>
+     </row>
+-    <row r="14" ht="31.0" customHeight="true">
++    <row r="14" spans="1:16" ht="30.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A14" s="3"/>
+-      <c r="B14" t="s" s="4">
++      <c r="B14" s="70" t="s">
+         <v>17</v>
+       </c>
+-      <c r="C14" s="4"/>
+-      <c r="D14" s="4"/>
+-      <c r="E14" s="4"/>
++      <c r="C14" s="70"/>
++      <c r="D14" s="70"/>
++      <c r="E14" s="70"/>
+       <c r="F14" s="3"/>
+       <c r="G14" s="3"/>
+       <c r="I14" s="3"/>
+@@ -270,21 +262,21 @@
+
+       <c r="O14" s="3"/>
+       <c r="P14" s="3"/>
+     </row>
+-    <row r="15" ht="24.0" customHeight="true">
++    <row r="15" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A15" s="3"/>
+-      <c r="B15" t="s" s="9">
++      <c r="B15" s="5" t="s">
+         <v>3</v>
+       </c>
+-      <c r="C15" t="s" s="9">
++      <c r="C15" s="5" t="s">
+         <v>18</v>
+       </c>
+-      <c r="D15" t="s" s="13">
++      <c r="D15" s="6" t="s">
+         <v>19</v>
+       </c>
+-      <c r="E15" t="s" s="14">
++      <c r="E15" s="7" t="s">
+         <v>20</v>
+       </c>
+-      <c r="F15" s="15"/>
++      <c r="F15" s="8"/>
+       <c r="G15" s="3"/>
+       <c r="H15" s="3"/>
+       <c r="I15" s="3"/>
+@@ -296,21 +288,21 @@
+
+       <c r="O15" s="3"/>
+       <c r="P15" s="3"/>
+     </row>
+-    <row r="16" ht="24.0" customHeight="true">
++    <row r="16" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A16" s="3"/>
+-      <c r="B16" t="s" s="16">
++      <c r="B16" s="77" t="s">
+         <v>7</v>
+       </c>
+-      <c r="C16" t="s" s="9">
++      <c r="C16" s="5" t="s">
+         <v>21</v>
+       </c>
+-      <c r="D16" t="s" s="13">
++      <c r="D16" s="6" t="s">
+         <v>22</v>
+       </c>
+-      <c r="E16" t="s" s="14">
++      <c r="E16" s="7" t="s">
+         <v>20</v>
+       </c>
+-      <c r="F16" s="15"/>
++      <c r="F16" s="8"/>
+       <c r="G16" s="3"/>
+       <c r="H16" s="3"/>
+       <c r="I16" s="3"/>
+@@ -322,19 +314,19 @@
+
+       <c r="O16" s="3"/>
+       <c r="P16" s="3"/>
+     </row>
+-    <row r="17" ht="24.0" customHeight="true">
++    <row r="17" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A17" s="3"/>
+-      <c r="B17" s="17"/>
+-      <c r="C17" t="s" s="9">
++      <c r="B17" s="78"/>
++      <c r="C17" s="5" t="s">
+         <v>23</v>
+       </c>
+-      <c r="D17" t="s" s="18">
++      <c r="D17" s="9" t="s">
+         <v>24</v>
+       </c>
+-      <c r="E17" t="s" s="14">
++      <c r="E17" s="7" t="s">
+         <v>20</v>
+       </c>
+-      <c r="F17" s="15"/>
++      <c r="F17" s="8"/>
+       <c r="G17" s="3"/>
+       <c r="H17" s="3"/>
+       <c r="I17" s="3"/>
+@@ -346,19 +338,19 @@
+
+       <c r="O17" s="3"/>
+       <c r="P17" s="3"/>
+     </row>
+-    <row r="18" ht="65.0" customHeight="true">
++    <row r="18" spans="1:16" ht="65.099999999999994" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A18" s="3"/>
+-      <c r="B18" s="17"/>
+-      <c r="C18" t="s" s="9">
++      <c r="B18" s="78"/>
++      <c r="C18" s="5" t="s">
+         <v>25</v>
+       </c>
+-      <c r="D18" t="s" s="18">
++      <c r="D18" s="9" t="s">
+         <v>26</v>
+       </c>
+-      <c r="E18" t="s" s="14">
++      <c r="E18" s="7" t="s">
+         <v>20</v>
+       </c>
+-      <c r="F18" s="15"/>
++      <c r="F18" s="8"/>
+       <c r="G18" s="3"/>
+       <c r="H18" s="3"/>
+       <c r="I18" s="3"/>
+@@ -370,17 +362,17 @@
+
+       <c r="O18" s="3"/>
+       <c r="P18" s="3"/>
+     </row>
+-    <row r="19" ht="57.0" customHeight="true">
++    <row r="19" spans="1:16" ht="57" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A19" s="3"/>
+-      <c r="B19" s="17"/>
+-      <c r="C19" t="s" s="9">
++      <c r="B19" s="78"/>
++      <c r="C19" s="5" t="s">
+         <v>27</v>
+       </c>
+-      <c r="D19" t="s" s="18">
++      <c r="D19" s="9" t="s">
+         <v>28</v>
+       </c>
+-      <c r="E19" s="14"/>
+-      <c r="F19" s="15"/>
++      <c r="E19" s="7"/>
++      <c r="F19" s="8"/>
+       <c r="G19" s="3"/>
+       <c r="H19" s="3"/>
+       <c r="I19" s="3"/>
+@@ -392,17 +384,17 @@
+
+       <c r="O19" s="3"/>
+       <c r="P19" s="3"/>
+     </row>
+-    <row r="20" ht="24.0" customHeight="true">
++    <row r="20" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A20" s="3"/>
+-      <c r="B20" s="19"/>
+-      <c r="C20" t="s" s="9">
++      <c r="B20" s="79"/>
++      <c r="C20" s="5" t="s">
+         <v>29</v>
+       </c>
+-      <c r="D20" t="s" s="13">
++      <c r="D20" s="6" t="s">
+         <v>30</v>
+       </c>
+-      <c r="E20" s="14"/>
+-      <c r="F20" s="15"/>
++      <c r="E20" s="7"/>
++      <c r="F20" s="8"/>
+       <c r="G20" s="3"/>
+       <c r="H20" s="3"/>
+       <c r="I20" s="3"/>
+@@ -414,23 +406,23 @@
+
+       <c r="O20" s="3"/>
+       <c r="P20" s="3"/>
+     </row>
+-    <row r="21" ht="24.0" customHeight="true">
++    <row r="21" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A21" s="3"/>
+-      <c r="B21" t="s" s="9">
++      <c r="B21" s="80" t="s">
+         <v>9</v>
+       </c>
+-      <c r="C21" t="s" s="9">
++      <c r="C21" s="5" t="s">
+         <v>31</v>
+       </c>
+-      <c r="D21" t="s" s="13">
++      <c r="D21" s="6" t="s">
+         <v>32</v>
+       </c>
+-      <c r="E21" s="20"/>
+-      <c r="F21" s="15"/>
++      <c r="E21" s="10"/>
++      <c r="F21" s="8"/>
+       <c r="G21" s="3"/>
+       <c r="H21" s="3"/>
+       <c r="I21" s="3"/>
+-      <c r="J21" s="21"/>
++      <c r="J21" s="11"/>
+       <c r="K21" s="3"/>
+       <c r="L21" s="3"/>
+       <c r="M21" s="3"/>
+@@ -438,21 +430,21 @@
+
+       <c r="O21" s="3"/>
+       <c r="P21" s="3"/>
+     </row>
+-    <row r="22" ht="24.0" customHeight="true">
++    <row r="22" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A22" s="3"/>
+-      <c r="B22" s="9"/>
+-      <c r="C22" t="s" s="9">
++      <c r="B22" s="80"/>
++      <c r="C22" s="5" t="s">
+         <v>33</v>
+       </c>
+-      <c r="D22" t="s" s="13">
++      <c r="D22" s="6" t="s">
+         <v>34</v>
+       </c>
+-      <c r="E22" s="20"/>
+-      <c r="F22" s="15"/>
++      <c r="E22" s="10"/>
++      <c r="F22" s="8"/>
+       <c r="G22" s="3"/>
+       <c r="H22" s="3"/>
+       <c r="I22" s="3"/>
+-      <c r="J22" s="21"/>
++      <c r="J22" s="11"/>
+       <c r="K22" s="3"/>
+       <c r="L22" s="3"/>
+       <c r="M22" s="3"/>
+@@ -460,21 +452,21 @@
+
+       <c r="O22" s="3"/>
+       <c r="P22" s="3"/>
+     </row>
+-    <row r="23" ht="24.0" customHeight="true">
++    <row r="23" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A23" s="3"/>
+-      <c r="B23" s="9"/>
+-      <c r="C23" t="s" s="9">
++      <c r="B23" s="80"/>
++      <c r="C23" s="5" t="s">
+         <v>35</v>
+       </c>
+-      <c r="D23" t="s" s="13">
++      <c r="D23" s="6" t="s">
+         <v>36</v>
+       </c>
+-      <c r="E23" s="20"/>
+-      <c r="F23" s="15"/>
++      <c r="E23" s="10"/>
++      <c r="F23" s="8"/>
+       <c r="G23" s="3"/>
+       <c r="H23" s="3"/>
+       <c r="I23" s="3"/>
+-      <c r="J23" s="21"/>
++      <c r="J23" s="11"/>
+       <c r="K23" s="3"/>
+       <c r="L23" s="3"/>
+       <c r="M23" s="3"/>
+@@ -482,25 +474,25 @@
+
+       <c r="O23" s="3"/>
+       <c r="P23" s="3"/>
+     </row>
+-    <row r="24" ht="24.0" customHeight="true">
++    <row r="24" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A24" s="3"/>
+-      <c r="B24" t="s" s="9">
++      <c r="B24" s="5" t="s">
+         <v>11</v>
+       </c>
+-      <c r="C24" t="s" s="9">
++      <c r="C24" s="5" t="s">
+         <v>37</v>
+       </c>
+-      <c r="D24" t="s" s="13">
++      <c r="D24" s="6" t="s">
+         <v>38</v>
+       </c>
+-      <c r="E24" t="s" s="14">
++      <c r="E24" s="7" t="s">
+         <v>20</v>
+       </c>
+-      <c r="F24" s="15"/>
++      <c r="F24" s="8"/>
+       <c r="G24" s="3"/>
+       <c r="H24" s="3"/>
+       <c r="I24" s="3"/>
+-      <c r="J24" s="21"/>
++      <c r="J24" s="11"/>
+       <c r="K24" s="3"/>
+       <c r="L24" s="3"/>
+       <c r="M24" s="3"/>
+@@ -508,25 +500,25 @@
+
+       <c r="O24" s="3"/>
+       <c r="P24" s="3"/>
+     </row>
+-    <row r="25" ht="24.0" customHeight="true">
++    <row r="25" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A25" s="3"/>
+-      <c r="B25" t="s" s="16">
++      <c r="B25" s="77" t="s">
+         <v>13</v>
+       </c>
+-      <c r="C25" t="s" s="9">
++      <c r="C25" s="5" t="s">
+         <v>39</v>
+       </c>
+-      <c r="D25" t="s" s="13">
++      <c r="D25" s="6" t="s">
+         <v>40</v>
+       </c>
+-      <c r="E25" t="s" s="14">
++      <c r="E25" s="7" t="s">
+         <v>20</v>
+       </c>
+-      <c r="F25" s="15"/>
++      <c r="F25" s="8"/>
+       <c r="G25" s="3"/>
+       <c r="H25" s="3"/>
+       <c r="I25" s="3"/>
+-      <c r="J25" s="21"/>
++      <c r="J25" s="11"/>
+       <c r="K25" s="3"/>
+       <c r="L25" s="3"/>
+       <c r="M25" s="3"/>
+@@ -534,23 +526,23 @@
+
+       <c r="O25" s="3"/>
+       <c r="P25" s="3"/>
+     </row>
+-    <row r="26" ht="24.0" customHeight="true">
++    <row r="26" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A26" s="3"/>
+-      <c r="B26" s="19"/>
+-      <c r="C26" t="s" s="9">
++      <c r="B26" s="79"/>
++      <c r="C26" s="5" t="s">
+         <v>41</v>
+       </c>
+-      <c r="D26" t="s" s="13">
++      <c r="D26" s="6" t="s">
+         <v>42</v>
+       </c>
+-      <c r="E26" t="s" s="14">
++      <c r="E26" s="7" t="s">
+         <v>20</v>
+       </c>
+-      <c r="F26" s="15"/>
++      <c r="F26" s="8"/>
+       <c r="G26" s="3"/>
+       <c r="H26" s="3"/>
+       <c r="I26" s="3"/>
+-      <c r="J26" s="21"/>
++      <c r="J26" s="11"/>
+       <c r="K26" s="3"/>
+       <c r="L26" s="3"/>
+       <c r="M26" s="3"/>
+@@ -558,19 +550,19 @@
+
+       <c r="O26" s="3"/>
+       <c r="P26" s="3"/>
+     </row>
+-    <row r="27" ht="24.0" customHeight="true">
++    <row r="27" spans="1:16" ht="24" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="A27" s="3"/>
+-      <c r="B27" t="s" s="22">
++      <c r="B27" s="81" t="s">
+         <v>15</v>
+       </c>
+-      <c r="C27" s="23"/>
+-      <c r="D27" t="s" s="13">
++      <c r="C27" s="82"/>
++      <c r="D27" s="6" t="s">
+         <v>43</v>
+       </c>
+-      <c r="E27" t="s" s="13">
++      <c r="E27" s="6" t="s">
+         <v>44</v>
+       </c>
+-      <c r="F27" s="15"/>
++      <c r="F27" s="8"/>
+       <c r="G27" s="3"/>
+       <c r="H27" s="3"/>
+       <c r="I27" s="3"/>
+@@ -582,133 +574,122 @@
+
+       <c r="O27" s="3"/>
+       <c r="P27" s="3"/>
+     </row>
+-    <row r="28" ht="16.0" customHeight="true">
++    <row r="28" spans="1:16" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E28" s="2"/>
+     </row>
+-    <row r="29" ht="16.0" customHeight="true">
++    <row r="29" spans="1:16" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E29" s="2"/>
+     </row>
+-    <row r="30" ht="16.0" customHeight="true">
++    <row r="30" spans="1:16" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E30" s="2"/>
+     </row>
+-    <row r="31" ht="16.0" customHeight="true">
++    <row r="31" spans="1:16" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E31" s="2"/>
+     </row>
+-    <row r="32" ht="16.0" customHeight="true">
++    <row r="32" spans="1:16" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E32" s="2"/>
+     </row>
+-    <row r="33" ht="16.0" customHeight="true">
++    <row r="33" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E33" s="2"/>
+     </row>
+-    <row r="34" ht="16.0" customHeight="true">
++    <row r="34" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E34" s="2"/>
+     </row>
+-    <row r="35" ht="16.0" customHeight="true">
++    <row r="35" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E35" s="2"/>
+     </row>
+-    <row r="36" ht="16.0" customHeight="true">
++    <row r="36" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E36" s="2"/>
+     </row>
+-    <row r="37" ht="16.0" customHeight="true">
++    <row r="37" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E37" s="2"/>
+     </row>
+-    <row r="38" ht="16.0" customHeight="true">
++    <row r="38" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E38" s="2"/>
+     </row>
+-    <row r="39" ht="16.0" customHeight="true">
++    <row r="39" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E39" s="2"/>
+     </row>
+-    <row r="40" ht="16.0" customHeight="true">
++    <row r="40" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E40" s="2"/>
+     </row>
+-    <row r="41" ht="16.0" customHeight="true">
++    <row r="41" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E41" s="2"/>
+     </row>
+-    <row r="42" ht="16.0" customHeight="true">
++    <row r="42" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E42" s="2"/>
+     </row>
+-    <row r="43" ht="16.0" customHeight="true">
++    <row r="43" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E43" s="2"/>
+     </row>
+-    <row r="44" ht="16.0" customHeight="true">
++    <row r="44" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E44" s="2"/>
+     </row>
+-    <row r="45" ht="16.0" customHeight="true">
++    <row r="45" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E45" s="2"/>
+     </row>
+-    <row r="46" ht="16.0" customHeight="true">
++    <row r="46" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E46" s="2"/>
+     </row>
+-    <row r="47" ht="16.0" customHeight="true">
++    <row r="47" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E47" s="2"/>
+     </row>
+-    <row r="48" ht="16.0" customHeight="true">
++    <row r="48" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E48" s="2"/>
+     </row>
+-    <row r="49" ht="16.0" customHeight="true">
++    <row r="49" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E49" s="2"/>
+     </row>
+-    <row r="50" ht="16.0" customHeight="true">
++    <row r="50" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E50" s="2"/>
+     </row>
+-    <row r="51" ht="16.0" customHeight="true">
++    <row r="51" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E51" s="2"/>
+     </row>
+-    <row r="52" ht="16.0" customHeight="true">
++    <row r="52" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E52" s="2"/>
+     </row>
+-    <row r="53" ht="16.0" customHeight="true">
++    <row r="53" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E53" s="2"/>
+     </row>
+-    <row r="54" ht="16.0" customHeight="true">
++    <row r="54" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E54" s="2"/>
+     </row>
+-    <row r="55" ht="16.0" customHeight="true">
++    <row r="55" spans="5:5" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
+       <c r="E55" s="2"/>
+     </row>
+-    <row r="56"/>
+-    <row r="57"/>
+-    <row r="58"/>
+-    <row r="59"/>
+-    <row r="60"/>
+-    <row r="61"/>
+-    <row r="62"/>
+-    <row r="63"/>
+-    <row r="64"/>
+-    <row r="65"/>
+-    <row r="66"/>
+-    <row r="67" ht="16.0" customHeight="true">
+-      <c r="J67" t="s" s="21">
++    <row r="67" spans="10:10" ht="15.95" customHeight="1" x14ac:dyDescent="0.25">
++      <c r="J67" s="11" t="s">
+         <v>45</v>
+       </c>
+     </row>
+   </sheetData>
+-  <sheetProtection sheet="true"/>
++  <sheetProtection sheet="1"/>
+   <mergeCells count="15">
++    <mergeCell ref="B14:E14"/>
++    <mergeCell ref="B16:B20"/>
++    <mergeCell ref="B21:B23"/>
++    <mergeCell ref="B25:B26"/>
++    <mergeCell ref="B27:C27"/>
++    <mergeCell ref="C8:E8"/>
++    <mergeCell ref="C9:E9"/>
++    <mergeCell ref="C10:E10"/>
++    <mergeCell ref="C11:E11"/>
++    <mergeCell ref="C12:E12"/>
+     <mergeCell ref="B2:E2"/>
+     <mergeCell ref="B3:E3"/>
+     <mergeCell ref="B5:E5"/>
+     <mergeCell ref="C6:E6"/>
+     <mergeCell ref="C7:E7"/>
+-    <mergeCell ref="C8:E8"/>
+-    <mergeCell ref="C9:E9"/>
+-    <mergeCell ref="C10:E10"/>
+-    <mergeCell ref="C11:E11"/>
+-    <mergeCell ref="C12:E12"/>
+-    <mergeCell ref="B14:E14"/>
+-    <mergeCell ref="B16:B20"/>
+-    <mergeCell ref="B21:B23"/>
+-    <mergeCell ref="B25:B26"/>
+-    <mergeCell ref="B27:C27"/>
+   </mergeCells>
+   <hyperlinks>
+-    <hyperlink display="" ref="E15" r:id="rId1"/>
+-    <hyperlink display="" ref="E16" r:id="rId2"/>
+-    <hyperlink display="" ref="E17" r:id="rId3"/>
+-    <hyperlink display="" ref="E18" r:id="rId4"/>
+-    <hyperlink display="" ref="E24" r:id="rId5"/>
+-    <hyperlink display="" ref="E25" r:id="rId6"/>
+-    <hyperlink display="" ref="E26" r:id="rId7"/>
++    <hyperlink ref="E15" r:id="rId1" xr:uid="{00000000-0004-0000-0000-000000000000}"/>
++    <hyperlink ref="E16" r:id="rId2" xr:uid="{00000000-0004-0000-0000-000001000000}"/>
++    <hyperlink ref="E17" r:id="rId3" xr:uid="{00000000-0004-0000-0000-000002000000}"/>
++    <hyperlink ref="E18" r:id="rId4" xr:uid="{00000000-0004-0000-0000-000003000000}"/>
++    <hyperlink ref="E24" r:id="rId5" xr:uid="{00000000-0004-0000-0000-000004000000}"/>
++    <hyperlink ref="E25" r:id="rId6" xr:uid="{00000000-0004-0000-0000-000005000000}"/>
++    <hyperlink ref="E26" r:id="rId7" xr:uid="{00000000-0004-0000-0000-000006000000}"/>
+   </hyperlinks>
+   <pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>
+ </worksheet>
+
+--- Comparing xl/_rels/workbook.xml.rels ---
+--- generated
+
++++ excel_saved
+
+@@ -1,9 +1,10 @@
+
+ <?xml version="1.0" ?>
+ <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+-  <Relationship Id="rId1" Target="sharedStrings.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings"/>
+-  <Relationship Id="rId2" Target="styles.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"/>
+-  <Relationship Id="rId3" Target="worksheets/sheet1.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"/>
+-  <Relationship Id="rId4" Target="worksheets/sheet2.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"/>
+-  <Relationship Id="rId5" Target="worksheets/sheet3.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"/>
+-  <Relationship Id="rId6" Target="worksheets/sheet4.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"/>
++  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>
++  <Relationship Id="rId7" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
++  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
++  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
++  <Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
++  <Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
++  <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/>
+ </Relationships>
+
+--- Comparing docProps/app.xml ---
+--- generated
+
++++ excel_saved
+
+@@ -1,4 +1,54 @@
+
+ <?xml version="1.0" ?>
+-<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
+-  <Application>Apache POI</Application>
++<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
++  <Application>Microsoft Excel</Application>
++  <DocSecurity>0</DocSecurity>
++  <ScaleCrop>false</ScaleCrop>
++  <HeadingPairs>
++    <vt:vector size="4" baseType="variant">
++      <vt:variant>
++        <vt:lpstr>工作表</vt:lpstr>
++      </vt:variant>
++      <vt:variant>
++        <vt:i4>4</vt:i4>
++      </vt:variant>
++      <vt:variant>
++        <vt:lpstr>具名範圍</vt:lpstr>
++      </vt:variant>
++      <vt:variant>
++        <vt:i4>20</vt:i4>
++      </vt:variant>
++    </vt:vector>
++  </HeadingPairs>
++  <TitlesOfParts>
++    <vt:vector size="24" baseType="lpstr">
++      <vt:lpstr>上傳須知</vt:lpstr>
++      <vt:lpstr>QF_5485_犬隻用品_外出設備_狗帶-項圈</vt:lpstr>
++      <vt:lpstr>HQF_405_5485</vt:lpstr>
++      <vt:lpstr>TW_General(405)</vt:lpstr>
++      <vt:lpstr>_5485_additionalImage5_28</vt:lpstr>
++      <vt:lpstr>_5485_additionalImage6_29</vt:lpstr>
++      <vt:lpstr>_5485_additionalImage7_30</vt:lpstr>
++      <vt:lpstr>_5485_additionalImage8_31</vt:lpstr>
++      <vt:lpstr>_5485_businessType_45</vt:lpstr>
++      <vt:lpstr>_5485_categoryPath_1</vt:lpstr>
++      <vt:lpstr>_5485_importType_46</vt:lpstr>
++      <vt:lpstr>_5485_productBarcode_3</vt:lpstr>
++      <vt:lpstr>_5485_specialHandlingReason_49</vt:lpstr>
++      <vt:lpstr>_5485_taxationSchema_43</vt:lpstr>
++      <vt:lpstr>_5485_unexposedAttributes_10</vt:lpstr>
++      <vt:lpstr>_5485_unexposedAttributes_12</vt:lpstr>
++      <vt:lpstr>_5485_unexposedAttributes_13</vt:lpstr>
++      <vt:lpstr>_5485_unexposedAttributes_14</vt:lpstr>
++      <vt:lpstr>_5485_unexposedAttributes_15</vt:lpstr>
++      <vt:lpstr>_5485_unexposedAttributes_16</vt:lpstr>
++      <vt:lpstr>_5485_unexposedAttributes_17</vt:lpstr>
++      <vt:lpstr>_5485_unexposedAttributes_18</vt:lpstr>
++      <vt:lpstr>_5485_unexposedAttributes_19</vt:lpstr>
++      <vt:lpstr>_5485_unexposedAttributes_9</vt:lpstr>
++    </vt:vector>
++  </TitlesOfParts>
++  <LinksUpToDate>false</LinksUpToDate>
++  <SharedDoc>false</SharedDoc>
++  <HyperlinksChanged>false</HyperlinksChanged>
++  <AppVersion>16.0300</AppVersion>
+ </Properties>

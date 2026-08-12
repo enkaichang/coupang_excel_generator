@@ -1,11 +1,12 @@
 class MyFamilyProcessor {
-  constructor(photoFilesArray, excelFileBuffer, colorAliases, zhColorMap, targetCombos, collectionAliases = {}) {
+  constructor(photoFilesArray, excelFileBuffer, colorAliases, zhColorMap, targetCombos, collectionAliases = {}, categoryRules = []) {
     this.photoFiles = photoFilesArray; 
     this.excelBuffer = excelFileBuffer;
     this.colorAliases = colorAliases;
     this.zhColorMap = zhColorMap;
     this.targetCombos = targetCombos;
     this.collectionAliases = collectionAliases;
+    this.categoryRules = categoryRules;
     
     this.folderMap = new Map();
     for (const file of this.photoFiles) {
@@ -27,32 +28,41 @@ class MyFamilyProcessor {
     return s.replace(/ /g, '').replace(/_/g, '').replace(/-/g, '');
   }
 
-  getTargetTemplateAndCategory(prodName, typeStr) {
-    const typeUpper = (typeStr || '').toUpperCase();
-    const nameUpper = (prodName || '').toUpperCase();
+  getTargetTemplateAndCategory(prodName = '', typeStr = '') {
+    const typeUpper = (typeStr || '').toUpperCase().trim();
+    const nameUpper = (prodName || '').toUpperCase().trim();
+    const fullText = (typeUpper + ' ' + nameUpper).trim();
 
-    if (typeUpper.includes('HARNESS') || prodName.includes('胸背帶') || nameUpper.includes('HARNESS')) {
-      return {
-        template_file: '商品報價單_胸背帶.xlsx',
-        output_file: '商品報價單_胸背帶_auto_generate.xlsx',
-        category: '寵物用品>狗用品>牽繩/胸背帶>胸背帶 (66030)',
-        target_subfolder: '胸背帶'
-      };
-    } else if (typeUpper.includes('LEASH') || prodName.includes('牽繩') || nameUpper.includes('LEASH')) {
-      return {
-        template_file: '商品報價單_項圈 牽繩.xlsx',
-        output_file: '商品報價單_項圈 牽繩_auto_generate.xlsx',
-        category: '寵物用品>犬貓通用>項圈/伸縮牽繩>牽繩 (66027)',
-        target_subfolder: '牽繩'
-      };
-    } else {
-      return {
-        template_file: '商品報價單_項圈 牽繩.xlsx',
-        output_file: '商品報價單_項圈 牽繩_auto_generate.xlsx',
-        category: '寵物用品>犬貓通用>項圈/伸縮牽繩>項圈 (66025)',
-        target_subfolder: '牽繩'
-      };
+    const rules = (this.categoryRules && this.categoryRules.length > 0)
+      ? this.categoryRules
+      : (window.AppConfig ? window.AppConfig.getDefaultCategoryRules() : []);
+
+    for (const rule of rules) {
+      const keywords = (rule.keywords || []).map(k => (k || '').toString().trim().toUpperCase()).filter(Boolean);
+      const isMatch = keywords.some(k => fullText.includes(k) || typeUpper.includes(k) || nameUpper.includes(k));
+      if (isMatch) {
+        const tmplType = (rule.template_type || 'LEASH').toUpperCase();
+        const tmplFile = rule.template_name || (tmplType === 'HARNESS' ? '商品報價單_胸背帶.xlsx' : '商品報價單_項圈 牽繩.xlsx');
+        const outputFile = tmplFile.replace('.xlsx', '_auto_generate.xlsx');
+        return {
+          template_type: tmplType,
+          template_file: tmplFile,
+          output_file: outputFile,
+          category: rule.category_name || (tmplType === 'HARNESS' ? '寵物用品>狗用品>牽繩/胸背帶>胸背帶 (66030)' : '寵物用品>犬貓通用>項圈/伸縮牽繩>項圈 (66025)'),
+          target_subfolder: rule.subfolder || (tmplType === 'HARNESS' ? '胸背帶' : '項圈牽繩'),
+          matched_rule: rule.name || ''
+        };
+      }
     }
+
+    return {
+      template_type: 'LEASH',
+      template_file: '商品報價單_項圈 牽繩.xlsx',
+      output_file: '商品報價單_項圈 牽繩_auto_generate.xlsx',
+      category: '寵物用品>犬貓通用>項圈/伸縮牽繩>項圈 (66025)',
+      target_subfolder: '項圈牽繩',
+      matched_rule: '預設'
+    };
   }
 
   extractColorFromZhName(zhName, prodSize = "") {
@@ -451,13 +461,40 @@ class MyFamilyProcessor {
     };
   }
 
-  static extractMappingsFromExcel(workbook, headerRow = 3, rowStart = 4, filterColName = '中文背標') {
-    const sheetNames = ['MYFAMILY', 'MY FAMILY', 'My Family', 'Sheet1'];
+  static extractMappingsFromExcel(workbook, headerRow = 3, rowStart = 4, filterColName = '中文背標', targetSheetName = null) {
     let ws = null;
-    for (const name of sheetNames) {
-      ws = workbook.sheet(name);
-      if (ws) break;
+    if (targetSheetName) {
+      const s = workbook.sheet(targetSheetName);
+      if (s && s.usedRange() && s.usedRange().endCell().rowNumber() > headerRow) {
+        ws = s;
+      }
     }
+    if (!ws) {
+      const candidateNames = ['商品資料', 'MYFAMILY', 'MY FAMILY', 'My Family', '工作表1', 'Sheet1'];
+      for (const name of candidateNames) {
+        const s = workbook.sheet(name);
+        if (s && s.usedRange() && s.usedRange().endCell().rowNumber() > headerRow) {
+          ws = s;
+          break;
+        }
+      }
+    }
+    if (!ws) {
+      const allSheets = workbook.sheets ? workbook.sheets() : [];
+      let bestSheet = null;
+      let maxRows = 0;
+      for (const s of allSheets) {
+        if (s && s.usedRange()) {
+          const rows = s.usedRange().endCell().rowNumber();
+          if (rows > headerRow && rows > maxRows) {
+            maxRows = rows;
+            bestSheet = s;
+          }
+        }
+      }
+      if (bestSheet) ws = bestSheet;
+    }
+    if (!ws && targetSheetName) ws = workbook.sheet(targetSheetName);
     if (!ws) ws = workbook.sheet(0);
     if (!ws) return { collections: {}, colors: {} };
 
@@ -655,3 +692,4 @@ class MyFamilyProcessor {
 }
 
 window.MyFamilyProcessor = MyFamilyProcessor;
+window.CoupangProcessor = MyFamilyProcessor;
