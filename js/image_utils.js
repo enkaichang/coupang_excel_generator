@@ -15,11 +15,13 @@ window.ImageUtils = {
     });
   },
   
-  ensureMinWidth: function(img, minW = 600) {
+  ensureMinShortEdge: function(img, minEdge = 1000) {
     return new Promise((resolve) => {
       const w = img.width;
       const h = img.height;
-      if (w > 500) {
+      const shortEdge = Math.min(w, h);
+      
+      if (shortEdge >= minEdge) {
         // Just return original blob via canvas if already large enough
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
@@ -29,9 +31,8 @@ window.ImageUtils = {
         return;
       }
       
-      const targetW = Math.max(minW, 600);
-      const ratio = targetW / w;
-      const newW = targetW;
+      const ratio = minEdge / shortEdge;
+      const newW = Math.round(w * ratio);
       const newH = Math.round(h * ratio);
       
       const canvas = document.createElement('canvas');
@@ -43,6 +44,7 @@ window.ImageUtils = {
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, newW, newH);
       
+      canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95);
     });
   },
 

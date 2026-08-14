@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>酷澎報價單與圖片批量生成系統 v1.4.2</title>
-  <!-- Google Fonts: Noto Sans TC -->
+  <title>酷澎報價單與圖片批量生成系統 v1.8.4</title>
+  <!-- Google Fonts: Noto Sans TC & Material Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   
   <!-- XlsxPopulate for reading/writing Excel while preserving all metadata/styles -->
@@ -31,14 +32,14 @@
         <div>
           <div style="display: flex; align-items: center; gap: 10px;">
             <h1>酷澎報價單與圖片生成系統</h1>
-            <span class="version-badge">v1.4.2</span>
+            <span class="version-badge">v1.8.4</span>
           </div>
-          <p class="subtitle">讀取來源 Excel 與商品圖庫，自動產生標準報價單及處理後圖片 ZIP</p>
+          <p class="subtitle">讀取來源 Excel 與商品圖庫，自動產生多模板標準報價單及處理後圖片</p>
         </div>
       </div>
       <div class="header-actions">
-        <button id="btnDownloadSample" class="btn btn-secondary">下載範例資料夾結構</button>
-        <button id="btnOpenConfig" class="btn btn-outline">對照表設定</button>
+        <button id="btnDownloadSample" class="btn btn-secondary btn-icon" title="下載範例資料夾結構"><span class="material-icons">download</span></button>
+        <button id="btnOpenConfig" class="btn btn-outline btn-icon" title="對照表設定"><span class="material-icons">tune</span></button>
       </div>
     </header>
 
@@ -71,17 +72,7 @@
         <!-- 來源處理範圍設定 -->
         <div class="range-config-bar">
           <div class="range-inputs">
-            <span class="range-label">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;">
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-              </svg>
-              處理範圍設定（列號）：
-            </span>
+            <span class="range-label">處理範圍設定（列號）：</span>
             <div class="range-field">
               <label for="inputRowStart">起始列</label>
               <input type="number" id="inputRowStart" min="1" placeholder="例如: 4" value="4">
@@ -90,14 +81,14 @@
               <label for="inputRowEnd">結束列</label>
               <input type="number" id="inputRowEnd" min="1" placeholder="留空 = 處理至結尾">
             </div>
-            <button type="button" id="btnResetRange" class="btn btn-outline btn-sm" title="重置為處理全部列">全部</button>
+            <button type="button" id="btnResetRange" class="btn btn-outline btn-sm btn-icon" title="重置為處理全部列"><span class="material-icons">restart_alt</span></button>
           </div>
           <div id="rangeInfoHint" class="range-hint">尚未載入來源 Excel</div>
         </div>
 
         <!-- 執行操作區 -->
         <div class="action-panel">
-          <button id="btnStartProcess" class="btn btn-primary btn-large" disabled>開始處理</button>
+          <button id="btnStartProcess" class="btn btn-primary btn-large btn-icon" disabled title="開始處理"><span class="material-icons">play_arrow</span></button>
         </div>
       </section>
 
@@ -131,8 +122,8 @@
         </div>
 
         <div class="result-actions">
-          <button id="btnSaveToFolder" class="btn btn-primary" disabled>一鍵存入資料夾 (推薦)</button>
-          <button id="btnDownloadZip" class="btn btn-secondary" disabled>打包下載 ZIP (.zip)</button>
+          <button id="btnSaveToFolder" class="btn btn-primary btn-icon" disabled title="一鍵存入資料夾 (推薦)"><span class="material-icons">folder_open</span></button>
+          <button id="btnDownloadZip" class="btn btn-secondary btn-icon" disabled title="打包下載 ZIP (.zip)"><span class="material-icons">download</span></button>
         </div>
 
         <div class="log-panel">
@@ -148,69 +139,185 @@
       <p>Powered By Enkai Chang</p>
     </footer>
 
-    <!-- Modal: 對照表設定編輯器 -->
+    <!-- Modal: 對照表與多模板設定檔編輯器 -->
     <div id="configModal" class="modal-overlay hidden">
       <div class="modal-card config-modal">
         <div class="modal-header">
-          <h3 class="modal-title">對照表與設定 (Config & Mapping Manager)</h3>
-          <button id="configModalClose" class="modal-close">&times;</button>
+          <h3 class="modal-title">對照表與設定 (Config & Multi-Template Manager)</h3>
+          <button id="configModalClose" class="modal-close" title="關閉"><span class="material-icons">close</span></button>
         </div>
         <div class="modal-content">
           <div class="tabs">
-            <button class="tab-btn active" data-target="tabConfig">config.json (欄位對照)</button>
-            <button class="tab-btn" data-target="tabCategoryRule">品類與分類代碼設定</button>
+            <button class="tab-btn active" data-target="tabTemplateProfiles">模板與設定檔 (Templates & Profiles)</button>
+            <button class="tab-btn" data-target="tabSourceConfig">來源表設定 (Source)</button>
             <button class="tab-btn" data-target="tabCollection">系列中英對照設定</button>
             <button class="tab-btn" data-target="tabColor">顏色別名設定</button>
-            <button class="tab-btn" data-target="tabTemplate">模板設定 (Excel)</button>
           </div>
-          <div class="tab-content active" id="tabConfig">
-            <div id="guiConfigForm" class="gui-form"></div>
-          </div>
-          <div class="tab-content" id="tabCategoryRule">
-            <p class="tab-desc">自訂品類判定規則。系統將依據來源 TYPE 欄位或中文品名關鍵字，動態決定套用的 Excel 模板種類、酷澎細分分類代碼及輸出子資料夾。</p>
-            <div id="guiCategoryRuleForm" class="gui-form"></div>
-            <div style="display:flex; justify-content:flex-start; align-items:center; margin-top:12px;">
-              <button id="btnAddCategoryRule" class="btn btn-outline btn-sm">+ 新增品類判定規則</button>
+
+          <!-- Tab 1: 多模板與專屬設定檔管理 -->
+          <div class="tab-content active" id="tabTemplateProfiles">
+            <div class="template-profile-manager">
+              <div class="profile-sidebar">
+                <div class="sidebar-header">
+                  <h4>設定檔清單</h4>
+                  <button id="btnOpenUploadWizard" class="btn btn-primary btn-sm btn-icon" title="新增模板"><span class="material-icons">add</span></button>
+                </div>
+                <input type="file" id="uploadTemplateFileInput" accept=".xlsx" hidden>
+                <div id="profileListContainer" class="profile-list"></div>
+              </div>
+              <div class="profile-editor-pane">
+                <div id="profileEditorContent"></div>
+              </div>
             </div>
           </div>
+
+          <!-- Tab 2: 來源表設定 -->
+          <div class="tab-content" id="tabSourceConfig">
+            <div id="guiSourceConfigForm" class="gui-form"></div>
+          </div>
+
+          <!-- Tab 3: 系列中英對照 -->
           <div class="tab-content" id="tabCollection">
             <p class="tab-desc">設定資料夾系列英文字眼與品名中文系列名的對應。當載入照片資料夾或 Excel 時，系統會自動掃描並填入對應關係；您亦可在此手動調整。</p>
             <div id="guiCollectionForm" class="gui-form"></div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-              <button id="btnAddCollection" class="btn btn-outline btn-sm">+ 新增系列對照</button>
-              <button id="btnRescanCollection" class="btn btn-secondary btn-sm" style="font-size:0.8rem;">🔄 重新從目前檔案自動掃描對照</button>
+              <button id="btnAddCollection" class="btn btn-outline btn-sm btn-icon" title="新增系列對照"><span class="material-icons">add</span></button>
+              <button id="btnRescanCollection" class="btn btn-secondary btn-sm btn-icon" title="重新從目前檔案自動掃描對照"><span class="material-icons">sync</span></button>
             </div>
           </div>
+
+          <!-- Tab 4: 顏色別名 -->
           <div class="tab-content" id="tabColor">
             <p class="tab-desc">設定資料夾顏色字眼與 Excel 顏色的對應。當載入照片資料夾或 Excel (含 COLOR 欄位) 時，系統會自動掃描並建立中文別名對照；您亦可在此手動調整。</p>
             <div id="guiColorForm" class="gui-form"></div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-              <button id="btnAddColor" class="btn btn-outline btn-sm">+ 新增顏色群組</button>
-              <button id="btnRescanColor" class="btn btn-secondary btn-sm" style="font-size:0.8rem;">🔄 重新從目前檔案自動掃描對照</button>
-            </div>
-          </div>
-          <div class="tab-content" id="tabTemplate">
-            <p class="tab-desc">更新內建的 Excel 模板。選擇新檔案後點擊儲存，下次處理即會使用新模板。</p>
-            <div style="margin-bottom:15px;">
-              <label><strong>商品報價單_胸背帶 模板:</strong></label><br/>
-              <input type="file" id="templateHarnessInput" accept=".xlsx" style="margin-top:5px; margin-bottom:10px;">
-              <div id="templateHarnessStatus" style="color:green; font-size:12px;">已套用預設模板</div>
-            </div>
-            <div>
-              <label><strong>商品報價單_項圈 牽繩 模板:</strong></label><br/>
-              <input type="file" id="templateLeashInput" accept=".xlsx" style="margin-top:5px; margin-bottom:10px;">
-              <div id="templateLeashStatus" style="color:green; font-size:12px;">已套用預設模板</div>
+              <button id="btnAddColor" class="btn btn-outline btn-sm btn-icon" title="新增顏色群組"><span class="material-icons">add</span></button>
+              <button id="btnRescanColor" class="btn btn-secondary btn-sm btn-icon" title="重新從目前檔案自動掃描對照"><span class="material-icons">sync</span></button>
             </div>
           </div>
         </div>
-        <div class="modal-actions">
-          <button id="btnResetConfig" class="btn btn-outline">還原為系統預設值</button>
-          <button id="btnSaveConfig" class="btn btn-primary">儲存設定</button>
+
+        <div class="modal-actions modal-actions-split">
+          <div class="actions-left">
+            <button id="btnExportConfigPackage" class="btn btn-outline btn-sm btn-icon" title="匯出備份 (JSON)"><span class="material-icons">download</span></button>
+            <button id="btnImportConfigPackage" class="btn btn-outline btn-sm btn-icon" title="從 JSON 檔案還原設定檔與模板"><span class="material-icons">upload</span></button>
+            <input type="file" id="importConfigFileInput" accept=".json" hidden>
+          </div>
+          <div class="actions-right">
+            <button id="btnResetConfig" class="btn btn-outline btn-icon" title="還原為系統預設值"><span class="material-icons">restart_alt</span></button>
+            <button id="btnSaveConfig" class="btn btn-primary btn-icon" title="儲存設定"><span class="material-icons">save</span></button>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Modal: 新模板設定精靈 (Wizard) -->
+    <div id="templateWizardModal" class="modal-overlay hidden">
+      <div class="modal-card wizard-modal">
+        <div class="modal-header">
+          <h3 class="modal-title">新模板設定精靈 (New Template Setup Wizard)</h3>
+          <button id="wizardModalClose" class="modal-close" title="關閉"><span class="material-icons">close</span></button>
+        </div>
+        <div class="modal-content">
+          <div class="wizard-step-info">
+            <p>系統已成功掃描 Excel 模板工作表（第 5 列欄位名，第 6 列必填標記）。已自動比對胸背帶基準設定，並為您標出新必填欄位供配置。</p>
+          </div>
+          <div class="wizard-meta-grid" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="wizard-field">
+              <label>模板設定檔名稱: <span class="req-star">*</span></label>
+              <input type="text" id="wizardProfileName" placeholder="例如: 寵物服飾 或 貓砂盆">
+            </div>
+            <div class="wizard-field">
+              <label>預設輸出子資料夾名稱: <span class="req-star">*</span></label>
+              <input type="text" id="wizardSubfolder" placeholder="例如: 寵物服飾">
+            </div>
+            <div class="wizard-field">
+              <label>匹配關鍵字 (逗號分隔): <span class="req-star">*</span></label>
+              <input type="text" id="wizardKeywords" placeholder="例如: CLOTHES, 衣服, 服飾, 寵物衣">
+            </div>
+            <div class="wizard-field">
+              <label>預設酷澎分類代碼與名稱: <span class="req-star">*</span></label>
+              <input type="text" id="wizardCategoryName" placeholder="例如: 寵物用品>狗用品>狗服飾 (66050)">
+            </div>
+          </div>
+          <div class="wizard-table-header">
+            <h4>掃描到的必填欄位配置清單 (<span id="wizardScannedCount">0</span> 個必填欄位)</h4>
+          </div>
+          <div class="wizard-table-container">
+            <table class="wizard-table">
+              <thead>
+                <tr>
+                  <th style="width: 28%;">目標模板欄位名稱</th>
+                  <th style="width: 22%;">欄位狀態</th>
+                  <th style="width: 20%;">對應類型</th>
+                  <th style="width: 30%;">設定值 / 來源表欄位</th>
+                </tr>
+              </thead>
+              <tbody id="wizardTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="btnCancelWizard" class="btn btn-outline btn-icon" title="取消"><span class="material-icons">close</span></button>
+          <button id="btnConfirmWizard" class="btn btn-primary btn-icon" title="確認建立設定檔"><span class="material-icons">check</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: 來源 Excel 缺漏欄位智慧補全 (Column Mapping Modal) -->
+    <div id="columnMappingModal" class="modal-overlay hidden">
+      <div class="modal-card mapping-modal">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h3 class="modal-title">來源 Excel 欄位智慧檢查與補全</h3>
+          </div>
+          <button id="mappingModalClose" class="modal-close" title="關閉"><span class="material-icons">close</span></button>
+        </div>
+        <div class="modal-content">
+          <div class="mapping-step-info">
+            <p>系統已自動分析您上傳的 Excel 檔案，偵測到需要套用的模板，並發現部分目標欄位在目前來源 Excel 表頭中找不到對應名稱。請在下方確認或選取正確的來源欄位：</p>
+          </div>
+          
+          <div class="detected-templates-bar">
+            <span class="detected-title">本檔案偵測到的適用模板：</span>
+            <div id="detectedTemplatesContainer" class="detected-templates-list"></div>
+          </div>
+
+          <div class="mapping-table-header">
+            <h4>待補全之欄位對應清單 (<span id="missingColumnCount">0</span> 個未匹配欄位)</h4>
+          </div>
+
+          <div class="mapping-table-container">
+            <table class="mapping-table">
+              <thead>
+                <tr>
+                  <th style="width: 24%;">目標報價單欄位</th>
+                  <th style="width: 20%;">適用模板</th>
+                  <th style="width: 20%;">原設定來源名稱</th>
+                  <th style="width: 36%;">指定來源 Excel 欄位 / 設定值</th>
+                </tr>
+              </thead>
+              <tbody id="mappingTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="mapping-options-bar">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chkRememberMappings" checked>
+              <span>記住此對應關係供日後使用（自動同步儲存至模板設定檔）</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="btnCancelMapping" class="btn btn-outline btn-icon" title="取消上傳"><span class="material-icons">close</span></button>
+          <button id="btnConfirmMapping" class="btn btn-primary btn-icon" title="確認對應並繼續載入"><span class="material-icons">check</span></button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
+  <script src="js/storage_utils.js"></script>
   <script src="js/templates.js"></script>
   <script src="js/default_config.js"></script>
   <script src="js/image_utils.js"></script>
