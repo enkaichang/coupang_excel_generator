@@ -151,7 +151,7 @@ window.AppConfig = {
   },
 
   get: function() {
-    const saved = localStorage.getItem('coupang_config') || localStorage.getItem('my_family_config');
+    const saved = localStorage.getItem('coupang_config');
     const def = this.getDefaultConfig();
     if (!saved) return def;
     try {
@@ -180,12 +180,12 @@ window.AppConfig = {
   },
 
   getCollectionAliases: function() {
-    const saved = localStorage.getItem('coupang_collection_aliases') || localStorage.getItem('my_family_collection_aliases');
+    const saved = localStorage.getItem('coupang_collection_aliases');
     return saved ? JSON.parse(saved) : this.getDefaultCollectionAliases();
   },
 
   getColorAliases: function() {
-    const saved = localStorage.getItem('coupang_color_aliases') || localStorage.getItem('my_family_color_aliases');
+    const saved = localStorage.getItem('coupang_color_aliases');
     return saved ? JSON.parse(saved) : this.getDefaultColorAliases();
   }
 };

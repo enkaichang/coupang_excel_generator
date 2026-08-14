@@ -201,22 +201,18 @@
         const current = window.AppConfig.get();
         current.source = { ...current.source, ...pkg.sourceConfig };
         localStorage.setItem('coupang_config', JSON.stringify(current));
-        localStorage.setItem('my_family_config', JSON.stringify(current));
       }
 
       if (Array.isArray(pkg.categoryRules)) {
         localStorage.setItem('coupang_category_rules', JSON.stringify(pkg.categoryRules));
-        localStorage.setItem('my_family_category_rules', JSON.stringify(pkg.categoryRules));
       }
 
       if (pkg.collectionAliases && typeof pkg.collectionAliases === 'object') {
         localStorage.setItem('coupang_collection_aliases', JSON.stringify(pkg.collectionAliases));
-        localStorage.setItem('my_family_collection_aliases', JSON.stringify(pkg.collectionAliases));
       }
 
       if (pkg.colorAliases && typeof pkg.colorAliases === 'object') {
         localStorage.setItem('coupang_color_aliases', JSON.stringify(pkg.colorAliases));
-        localStorage.setItem('my_family_color_aliases', JSON.stringify(pkg.colorAliases));
       }
 
       if (Array.isArray(pkg.profiles)) {
@@ -231,7 +227,6 @@
             const customTemplates = JSON.parse(localStorage.getItem('coupang_templates') || '{}');
             customTemplates[id] = data;
             localStorage.setItem('coupang_templates', JSON.stringify(customTemplates));
-            localStorage.setItem('my_family_templates', JSON.stringify(customTemplates));
           } else {
             await this.saveTemplateData(id, data);
           }

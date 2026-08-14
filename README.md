@@ -5,7 +5,7 @@
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-coupang__excel__generator-181717?logo=github)](https://github.com/enkaichang/coupang_excel_generator)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version: v1.8.4](https://img.shields.io/badge/Version-v1.8.4-blue.svg)](https://github.com/enkaichang/coupang_excel_generator)
+[![Version: v1.8.5](https://img.shields.io/badge/Version-v1.8.5-blue.svg)](https://github.com/enkaichang/coupang_excel_generator)
 
 ---
 
@@ -72,7 +72,7 @@ coupang_excel_generator/
     ├── storage_utils.js    # IndexedDB 儲存介面與設定檔備份匯出/匯入工具
     ├── default_config.js   # 預設模板設定檔、基準對照與系列/顏色字典
     ├── image_utils.js      # Canvas 圖片載入、尺寸檢測與等比縮放工具
-    ├── my_family_processor.js # 核心業務邏輯（品名解析、分類判定、圖片搜尋與配對）
+    ├── coupang_processor.js   # 核心業務邏輯（品名解析、分類判定、圖片搜尋與配對）
     └── templates.js        # 內建標準報價單 Excel 模板 Base64 編碼
 `
 
@@ -107,6 +107,14 @@ coupang_excel_generator/
 ---
 
 ## 📝 版本日誌 (Changelog)
+
+### [v1.8.5] - 2026-08-14
+#### 🧹 廠商專用代碼清理與核心命名標準化 (Vendor Legacy Cleanup & CoupangProcessor Refactor)
+- **核心處理器標準化更名**：將 `my_family_processor.js` 與 `MyFamilyProcessor` 正式重構更名為通用之 `coupang_processor.js` 與 `CoupangProcessor`。
+- **清除廠商特定工作表候選名稱**：工作表自動探測機制中移除 `MYFAMILY`、`MY FAMILY`、`My Family` 等硬編碼備選名稱，改用純通用名稱探測。
+- **清理歷史向下相容別名與儲存鍵**：移除 `window.MyFamilyTemplates` 舊別名以及 `my_family_*` 系列 localStorage 寫入與向下相容代碼。
+
+---
 
 ### [v1.8.4] - 2026-08-14
 #### 💄 全面純圖示化操作與文字精簡 (Pure Icon-Only Action Buttons & Clean UI)

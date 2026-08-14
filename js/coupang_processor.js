@@ -1,4 +1,4 @@
-class MyFamilyProcessor {
+class CoupangProcessor {
   constructor(photoFilesArray, excelFileBuffer, colorAliases = {}, collectionAliases = {}, templateProfiles = []) {
     // Backwards compatibility check if old signature is used
     if (Array.isArray(arguments[3]) && Array.isArray(arguments[4])) {
@@ -26,7 +26,7 @@ class MyFamilyProcessor {
   }
 
   getAllCategoryKeywords() {
-    return MyFamilyProcessor.getAllCategoryKeywords(this.templateProfiles);
+    return CoupangProcessor.getAllCategoryKeywords(this.templateProfiles);
   }
 
   static getAllCategoryKeywords(templateProfiles = []) {
@@ -509,7 +509,7 @@ class MyFamilyProcessor {
       if (fUpper.includes(kw)) return true;
     }
 
-    const catKeywords = MyFamilyProcessor.getAllCategoryKeywords(templateProfiles);
+    const catKeywords = CoupangProcessor.getAllCategoryKeywords(templateProfiles);
     for (const kw of catKeywords) {
       const kwU = kw.toUpperCase().trim();
       if (fUpper === kwU || fUpper.includes(kwU)) return true;
@@ -522,7 +522,7 @@ class MyFamilyProcessor {
   static scanFolderStructure(photoFilesArray, templateProfiles = []) {
     const collections = new Set();
     const colors = new Set();
-    const catKeywords = MyFamilyProcessor.getAllCategoryKeywords(templateProfiles);
+    const catKeywords = CoupangProcessor.getAllCategoryKeywords(templateProfiles);
     const escapedKws = catKeywords.map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
     const catRegex = new RegExp(`(?:${escapedKws})\\s*(.+)$`, 'i');
 
@@ -592,7 +592,7 @@ class MyFamilyProcessor {
       }
     }
     if (!ws) {
-      const candidateNames = ['商品資料', 'MYFAMILY', 'MY FAMILY', 'My Family', '工作表1', 'Sheet1', 'Data', 'Sheet', '工作表'];
+      const candidateNames = ['商品資料', '工作表1', 'Sheet1', 'Data', 'Sheet', '工作表'];
       for (const name of candidateNames) {
         const s = workbook.sheet(name);
         if (s && s.usedRange() && s.usedRange().endCell().rowNumber() > headerRow) {
@@ -652,7 +652,7 @@ class MyFamilyProcessor {
     const collectionMap = {}; // { "HERMITAGE": Set(["隱士", ...]) }
     const colorMap = {};      // { "CAMEL": Set(["可可棕", ...]) }
 
-    const dummyProcessor = new MyFamilyProcessor([], null, {}, {}, templateProfiles);
+    const dummyProcessor = new CoupangProcessor([], null, {}, {}, templateProfiles);
 
     for (let r = rowStart; r <= totalRows; r++) {
       const zhName = getVal(r, colNameIdx);
@@ -666,17 +666,17 @@ class MyFamilyProcessor {
       let zhColor = parsed.color || dummyProcessor.extractColorFromZhName(zhName, rawSize);
       const zhColl = (parsed.collection || '').replace(/系列$/g, '').trim();
 
-      if (zhColor && MyFamilyProcessor.isCategoryOrNonColor(zhColor, templateProfiles)) {
+      if (zhColor && CoupangProcessor.isCategoryOrNonColor(zhColor, templateProfiles)) {
         zhColor = '';
       }
 
-      if (rawColl && zhColl && !MyFamilyProcessor.isCategoryOrNonColor(rawColl, templateProfiles)) {
+      if (rawColl && zhColl && !CoupangProcessor.isCategoryOrNonColor(rawColl, templateProfiles)) {
         const cleanCollKey = rawColl.trim();
         if (!collectionMap[cleanCollKey]) collectionMap[cleanCollKey] = new Set();
         collectionMap[cleanCollKey].add(zhColl);
       }
 
-      if (rawColor && zhColor && !MyFamilyProcessor.isCategoryOrNonColor(rawColor, templateProfiles)) {
+      if (rawColor && zhColor && !CoupangProcessor.isCategoryOrNonColor(rawColor, templateProfiles)) {
         const cleanColorKey = rawColor.trim();
         if (!colorMap[cleanColorKey]) colorMap[cleanColorKey] = new Set();
         colorMap[cleanColorKey].add(zhColor);
@@ -702,15 +702,15 @@ class MyFamilyProcessor {
   static mergeScannedAliases(existingCollections = {}, existingColors = {}, scannedFolder = { collections: [], colors: [] }, excelData = { collections: {}, colors: {} }, templateProfiles = []) {
     const newCollections = {};
     for (const [k, v] of Object.entries(existingCollections)) {
-      if (!MyFamilyProcessor.isCategoryOrNonColor(k, templateProfiles)) {
-        newCollections[k] = (v || []).filter(al => !MyFamilyProcessor.isCategoryOrNonColor(al, templateProfiles));
+      if (!CoupangProcessor.isCategoryOrNonColor(k, templateProfiles)) {
+        newCollections[k] = (v || []).filter(al => !CoupangProcessor.isCategoryOrNonColor(al, templateProfiles));
       }
     }
 
     const newColors = {};
     for (const [k, v] of Object.entries(existingColors)) {
-      if (!MyFamilyProcessor.isCategoryOrNonColor(k, templateProfiles)) {
-        newColors[k] = (v || []).filter(al => !MyFamilyProcessor.isCategoryOrNonColor(al, templateProfiles));
+      if (!CoupangProcessor.isCategoryOrNonColor(k, templateProfiles)) {
+        newColors[k] = (v || []).filter(al => !CoupangProcessor.isCategoryOrNonColor(al, templateProfiles));
       }
     }
 
@@ -722,7 +722,7 @@ class MyFamilyProcessor {
 
     // 1. 合併掃描到的系列 (Collections)
     for (const collName of scannedFolder.collections || []) {
-      if (MyFamilyProcessor.isCategoryOrNonColor(collName, templateProfiles)) continue;
+      if (CoupangProcessor.isCategoryOrNonColor(collName, templateProfiles)) continue;
       const nColl = norm(collName);
       if (!nColl) continue;
 
@@ -736,11 +736,11 @@ class MyFamilyProcessor {
 
     // 2. 合併 Excel 中發現的系列中英文對應
     for (const [rawColl, zhColls] of Object.entries(excelData.collections || {})) {
-      if (MyFamilyProcessor.isCategoryOrNonColor(rawColl, templateProfiles)) continue;
+      if (CoupangProcessor.isCategoryOrNonColor(rawColl, templateProfiles)) continue;
       const nColl = norm(rawColl);
       if (!nColl) continue;
 
-      const validZhColls = (zhColls || []).filter(zh => !MyFamilyProcessor.isCategoryOrNonColor(zh, templateProfiles));
+      const validZhColls = (zhColls || []).filter(zh => !CoupangProcessor.isCategoryOrNonColor(zh, templateProfiles));
 
       let foundKey = Object.keys(newCollections).find(k => norm(k) === nColl);
       if (!foundKey) {
@@ -759,7 +759,7 @@ class MyFamilyProcessor {
 
     // 3. 合併掃描到的顏色 (Colors)
     for (const colorName of scannedFolder.colors || []) {
-      if (MyFamilyProcessor.isCategoryOrNonColor(colorName, templateProfiles)) continue;
+      if (CoupangProcessor.isCategoryOrNonColor(colorName, templateProfiles)) continue;
       const nCol = norm(colorName);
       if (!nCol) continue;
 
@@ -776,11 +776,11 @@ class MyFamilyProcessor {
 
     // 4. 合併 Excel 中發現的顏色中英文對應
     for (const [rawColor, zhColors] of Object.entries(excelData.colors || {})) {
-      if (MyFamilyProcessor.isCategoryOrNonColor(rawColor, templateProfiles)) continue;
+      if (CoupangProcessor.isCategoryOrNonColor(rawColor, templateProfiles)) continue;
       const nCol = norm(rawColor);
       if (!nCol) continue;
 
-      const validZhColors = (zhColors || []).filter(zh => !MyFamilyProcessor.isCategoryOrNonColor(zh, templateProfiles));
+      const validZhColors = (zhColors || []).filter(zh => !CoupangProcessor.isCategoryOrNonColor(zh, templateProfiles));
 
       let foundKey = Object.keys(newColors).find(k => {
         if (norm(k) === nCol) return true;
@@ -813,5 +813,4 @@ class MyFamilyProcessor {
   }
 }
 
-window.MyFamilyProcessor = MyFamilyProcessor;
-window.CoupangProcessor = MyFamilyProcessor;
+window.CoupangProcessor = CoupangProcessor;

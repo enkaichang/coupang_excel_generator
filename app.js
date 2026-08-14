@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.8.4';
+const APP_VERSION = 'v1.8.5';
 
 function normalizeHeaderKey(str) {
   if (!str) return '';
@@ -294,7 +294,7 @@ function detectRequiredTemplates(ws, headerRow, rowStart, maxRow, profiles, sour
   const filterColIdx = findHeaderColIdx(headerMap, filterColName);
 
   const matchedProfileIds = new Set();
-  const processor = new window.MyFamilyProcessor([], null, {}, {}, profiles);
+  const processor = new window.CoupangProcessor([], null, {}, {}, profiles);
 
   const range = ws.usedRange();
   const totalR = range ? range.endCell().rowNumber() : 100;
@@ -303,8 +303,8 @@ function detectRequiredTemplates(ws, headerRow, rowStart, maxRow, profiles, sour
 
   // Fallback: discover name column by scanning cell contents against known category keywords
   if (!nameColIdx) {
-    const allKeywords = (typeof MyFamilyProcessor !== 'undefined' && MyFamilyProcessor.getAllCategoryKeywords)
-      ? MyFamilyProcessor.getAllCategoryKeywords(profiles)
+    const allKeywords = (typeof CoupangProcessor !== 'undefined' && CoupangProcessor.getAllCategoryKeywords)
+      ? CoupangProcessor.getAllCategoryKeywords(profiles)
       : ['HARNESS', 'COLLAR', 'LEASH', '胸背帶', '項圈', '牽繩', '背帶'];
     const maxCol = range ? range.endCell().columnNumber() : 20;
     let bestCol = 0;
@@ -1274,17 +1274,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           const globalConfig = window.AppConfig.get();
           globalConfig.source = sc;
           localStorage.setItem('coupang_config', JSON.stringify(globalConfig));
-          localStorage.setItem('my_family_config', JSON.stringify(globalConfig));
         }
         if (typeof parseGuiCollection === 'function') {
           const ca = parseGuiCollection();
           localStorage.setItem('coupang_collection_aliases', JSON.stringify(ca));
-          localStorage.setItem('my_family_collection_aliases', JSON.stringify(ca));
         }
         if (typeof parseGuiColor === 'function') {
           const cla = parseGuiColor();
           localStorage.setItem('coupang_color_aliases', JSON.stringify(cla));
-          localStorage.setItem('my_family_color_aliases', JSON.stringify(cla));
         }
         const pkg = await window.StorageUtils.exportConfigPackage();
         const jsonStr = JSON.stringify(pkg, null, 2);
@@ -1363,13 +1360,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const globalConfig = window.AppConfig.get();
       globalConfig.source = currentSourceConfig;
       localStorage.setItem('coupang_config', JSON.stringify(globalConfig));
-      localStorage.setItem('my_family_config', JSON.stringify(globalConfig));
 
       localStorage.setItem('coupang_collection_aliases', JSON.stringify(currentCollectionAliases));
-      localStorage.setItem('my_family_collection_aliases', JSON.stringify(currentCollectionAliases));
 
       localStorage.setItem('coupang_color_aliases', JSON.stringify(currentColorAliases));
-      localStorage.setItem('my_family_color_aliases', JSON.stringify(currentColorAliases));
 
       updateRangeHintUI();
       alert('所有設定檔與對照表已儲存！');
@@ -1426,7 +1420,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function autoScanAndSyncMappings(showLog = true) {
     let scannedFolder = { collections: [], colors: [] };
     if (photoFilesArray && photoFilesArray.length > 0) {
-      scannedFolder = window.MyFamilyProcessor.scanFolderStructure(photoFilesArray, templateProfiles);
+      scannedFolder = window.CoupangProcessor.scanFolderStructure(photoFilesArray, templateProfiles);
     }
 
     let excelData = { collections: {}, colors: {} };
@@ -1434,13 +1428,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const headerRow = currentSourceConfig.header_row || 3;
       const rowStart = currentSourceConfig.row_start || 4;
       const filterColName = currentSourceConfig.filter_column || '中文背標';
-      excelData = window.MyFamilyProcessor.extractMappingsFromExcel(loadedWorkbook, headerRow, rowStart, filterColName, currentSourceConfig?.sheet_name, templateProfiles);
+      excelData = window.CoupangProcessor.extractMappingsFromExcel(loadedWorkbook, headerRow, rowStart, filterColName, currentSourceConfig?.sheet_name, templateProfiles);
     }
 
     if (scannedFolder.collections.length > 0 || Object.keys(excelData.collections).length > 0 ||
         scannedFolder.colors.length > 0 || Object.keys(excelData.colors).length > 0) {
       
-      const merged = window.MyFamilyProcessor.mergeScannedAliases(
+      const merged = window.CoupangProcessor.mergeScannedAliases(
         currentCollectionAliases,
         currentColorAliases,
         scannedFolder,
@@ -1512,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    const candidateNames = ['商品資料', 'MYFAMILY', 'MY FAMILY', 'My Family', '工作表1', 'Sheet1'];
+    const candidateNames = ['商品資料', '工作表1', 'Sheet1', 'Data', 'Sheet', '工作表'];
     for (const name of candidateNames) {
       const s = wb.sheet(name);
       if (s && s.usedRange() && s.usedRange().endCell().rowNumber() > headerRow) {
@@ -1700,7 +1694,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           const globalConfig = window.AppConfig.get();
           globalConfig.source = currentSourceConfig;
           localStorage.setItem('coupang_config', JSON.stringify(globalConfig));
-          localStorage.setItem('my_family_config', JSON.stringify(globalConfig));
           if (typeof renderTemplateProfilesUI === 'function') renderTemplateProfilesUI();
           if (typeof renderSourceConfig === 'function') renderSourceConfig(currentSourceConfig);
         }
@@ -1781,7 +1774,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      const processor = new window.MyFamilyProcessor(
+      const processor = new window.CoupangProcessor(
         photoFilesArray,
         arrayBuffer,
         currentColorAliases,
@@ -1804,7 +1797,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let b64 = null;
         if (profile.is_builtin) {
-          b64 = (profile.id === 'HARNESS') ? (window.CoupangTemplates?.HARNESS || window.MyFamilyTemplates?.HARNESS) : (window.CoupangTemplates?.LEASH || window.MyFamilyTemplates?.LEASH);
+          b64 = (profile.id === 'HARNESS') ? window.CoupangTemplates?.HARNESS : window.CoupangTemplates?.LEASH;
         }
         if (!b64) {
           b64 = await window.StorageUtils.getTemplateData(profile.id);
@@ -1872,7 +1865,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const rawType = typeIdx ? (getCellValue(ws.cell(r, typeIdx)) || '').toString().trim() : '';
         const colorIdx = findHeaderColIdx(headers, 'COLOR') || findHeaderColIdx(headers, '顏色') || findHeaderColIdx(headers, 'Color');
         const rawColor = colorIdx ? (getCellValue(ws.cell(r, colorIdx)) || '').toString().trim() : '';
-        const sizeIdx = findHeaderColIdx(headers, 'SIZE') || findHeaderColIdx(headers, '尺寸') || findHeaderColIdx(headers, 'Size');
+        const sizeIdx = findHeaderColIdx(headers, 'SIZE') || findHeaderColIdx(headers, '尺寸') || findHeaderColIdx(headers, 'Size') || findHeaderColIdx(headers, 'Size_');
         const rawSize = sizeIdx ? (getCellValue(ws.cell(r, sizeIdx)) || '').toString().trim() : '';
         
         const rawHints = { brand: rawBrand, collection: rawCollection, type: rawType, color: rawColor, size: rawSize, sku: skuStr };
