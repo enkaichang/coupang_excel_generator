@@ -160,6 +160,40 @@
     },
 
     /**
+     * Clear all template profiles
+     */
+    async clearAllProfiles() {
+      try {
+        const store = await getStore(STORE_PROFILES, 'readwrite');
+        await new Promise((resolve, reject) => {
+          const req = store.clear();
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      } catch (err) {
+        console.warn('StorageUtils.clearAllProfiles error:', err);
+      }
+      localStorage.removeItem('coupang_template_profiles');
+    },
+
+    /**
+     * Clear all template binary data
+     */
+    async clearAllTemplates() {
+      try {
+        const store = await getStore(STORE_TEMPLATES, 'readwrite');
+        await new Promise((resolve, reject) => {
+          const req = store.clear();
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      } catch (err) {
+        console.warn('StorageUtils.clearAllTemplates error:', err);
+      }
+      localStorage.removeItem('coupang_templates');
+    },
+
+    /**
      * Export all configuration (profiles, category rules, aliases, and custom templates) to a single JSON package
      */
     async exportConfigPackage() {
@@ -177,16 +211,12 @@
       if (customTemplates.LEASH) templatesData['LEASH'] = customTemplates.LEASH;
 
       const sourceConfig = window.AppConfig ? window.AppConfig.get().source : {};
-      const collectionAliases = window.AppConfig ? window.AppConfig.getCollectionAliases() : {};
-      const colorAliases = window.AppConfig ? window.AppConfig.getColorAliases() : {};
 
       return {
-        version: '1.6.1',
+        version: '2.0.0',
         exportedAt: new Date().toISOString(),
         sourceConfig,
         profiles,
-        collectionAliases,
-        colorAliases,
         templatesData
       };
     },
@@ -207,21 +237,15 @@
         localStorage.setItem('coupang_category_rules', JSON.stringify(pkg.categoryRules));
       }
 
-      if (pkg.collectionAliases && typeof pkg.collectionAliases === 'object') {
-        localStorage.setItem('coupang_collection_aliases', JSON.stringify(pkg.collectionAliases));
-      }
-
-      if (pkg.colorAliases && typeof pkg.colorAliases === 'object') {
-        localStorage.setItem('coupang_color_aliases', JSON.stringify(pkg.colorAliases));
-      }
-
       if (Array.isArray(pkg.profiles)) {
+        await this.clearAllProfiles();
         for (const p of pkg.profiles) {
           await this.saveProfile(p);
         }
       }
 
       if (pkg.templatesData && typeof pkg.templatesData === 'object') {
+        await this.clearAllTemplates();
         for (const [id, data] of Object.entries(pkg.templatesData)) {
           if (['HARNESS', 'LEASH'].includes(id)) {
             const customTemplates = JSON.parse(localStorage.getItem('coupang_templates') || '{}');

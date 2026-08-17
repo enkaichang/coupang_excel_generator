@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>酷澎報價單與圖片批量生成系統 v1.8.5</title>
+  <title>酷澎報價單與圖片批量生成系統 v2.8.0</title>
   <!-- Google Fonts: Noto Sans TC & Material Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,7 +32,7 @@
         <div>
           <div style="display: flex; align-items: center; gap: 10px;">
             <h1>酷澎報價單與圖片生成系統</h1>
-            <span class="version-badge">v1.8.5</span>
+            <span class="version-badge">v2.8.0</span>
           </div>
           <p class="subtitle">讀取來源 Excel 與商品圖庫，自動產生多模板標準報價單及處理後圖片</p>
         </div>
@@ -102,12 +102,20 @@
             <div class="stat-value" id="statTotalSku">0</div>
           </div>
           <div class="stat-card">
-            <div class="stat-title">已成功配對圖片</div>
+            <div class="stat-title">已成功配對主圖</div>
             <div class="stat-value success" id="statMatchedImages">0</div>
           </div>
           <div class="stat-card">
-            <div class="stat-title">找不到圖片 (警告)</div>
+            <div class="stat-title">缺主圖 (警告)</div>
             <div class="stat-value warning" id="statMissingImages">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">缺背標 (警告)</div>
+            <div class="stat-value warning" id="statMissingBackLabels">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">未配對報價單 (略過)</div>
+            <div class="stat-value danger" id="statUnmatchedTemplates">0</div>
           </div>
         </div>
 
@@ -150,8 +158,6 @@
           <div class="tabs">
             <button class="tab-btn active" data-target="tabTemplateProfiles">模板與設定檔 (Templates & Profiles)</button>
             <button class="tab-btn" data-target="tabSourceConfig">來源表設定 (Source)</button>
-            <button class="tab-btn" data-target="tabCollection">系列中英對照設定</button>
-            <button class="tab-btn" data-target="tabColor">顏色別名設定</button>
           </div>
 
           <!-- Tab 1: 多模板與專屬設定檔管理 -->
@@ -174,26 +180,6 @@
           <!-- Tab 2: 來源表設定 -->
           <div class="tab-content" id="tabSourceConfig">
             <div id="guiSourceConfigForm" class="gui-form"></div>
-          </div>
-
-          <!-- Tab 3: 系列中英對照 -->
-          <div class="tab-content" id="tabCollection">
-            <p class="tab-desc">設定資料夾系列英文字眼與品名中文系列名的對應。當載入照片資料夾或 Excel 時，系統會自動掃描並填入對應關係；您亦可在此手動調整。</p>
-            <div id="guiCollectionForm" class="gui-form"></div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-              <button id="btnAddCollection" class="btn btn-outline btn-sm btn-icon" title="新增系列對照"><span class="material-icons">add</span></button>
-              <button id="btnRescanCollection" class="btn btn-secondary btn-sm btn-icon" title="重新從目前檔案自動掃描對照"><span class="material-icons">sync</span></button>
-            </div>
-          </div>
-
-          <!-- Tab 4: 顏色別名 -->
-          <div class="tab-content" id="tabColor">
-            <p class="tab-desc">設定資料夾顏色字眼與 Excel 顏色的對應。當載入照片資料夾或 Excel (含 COLOR 欄位) 時，系統會自動掃描並建立中文別名對照；您亦可在此手動調整。</p>
-            <div id="guiColorForm" class="gui-form"></div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-              <button id="btnAddColor" class="btn btn-outline btn-sm btn-icon" title="新增顏色群組"><span class="material-icons">add</span></button>
-              <button id="btnRescanColor" class="btn btn-secondary btn-sm btn-icon" title="重新從目前檔案自動掃描對照"><span class="material-icons">sync</span></button>
-            </div>
           </div>
         </div>
 
@@ -264,6 +250,54 @@
       </div>
     </div>
 
+    <!-- Modal: 未匹配品類模板品項提示 -->
+    <div id="unmatchedTemplateModal" class="modal-overlay hidden">
+      <div class="modal-card unmatched-modal">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="material-icons" style="color: #f59e0b; font-size: 1.6rem;">warning</span>
+            <h3 class="modal-title">發現未設定模板之商品品項</h3>
+          </div>
+          <button id="unmatchedModalClose" class="modal-close" title="關閉"><span class="material-icons">close</span></button>
+        </div>
+        <div class="modal-content">
+          <div class="unmatched-alert-box">
+            <p>系統掃描來源 Excel 時，檢測到共發現 <strong id="unmatchedTypeCount" class="unmatched-count-highlight">0</strong> 種未設定模板之 Type（合計 <strong id="unmatchedTotalCount" class="unmatched-count-highlight">0</strong> 筆商品）。若直接產生報價單，這些品項將歸入「未分類品項」並標記紅底警示。</p>
+            <p style="margin-top: 6px; font-size: 0.85rem; color: #64748b;">建議您點擊「前往設定模板」在「對照表設定 ➔ 模板與設定檔」中新增該品類的模板與關鍵字。</p>
+          </div>
+
+          <div class="unmatched-table-header">
+            <h4>未命中 Type 彙總清單 (<span id="unmatchedListCount">0</span> 種 Type，共 <span id="unmatchedItemsListCount">0</span> 筆商品)</h4>
+          </div>
+
+          <div class="unmatched-table-container">
+            <table class="unmatched-table">
+              <thead>
+                <tr>
+                  <th style="width: 42%;">來源 Type 類別</th>
+                  <th style="width: 25%; text-align: center;">出現次數 (筆數)</th>
+                  <th style="width: 33%; text-align: right;">包含商品明細</th>
+                </tr>
+              </thead>
+              <tbody id="unmatchedTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-actions modal-actions-split">
+          <div class="actions-left">
+            <button id="btnIgnoreUnmatched" class="btn btn-outline" title="暫時略過並繼續載入">
+              <span class="material-icons">arrow_forward</span> 略過並繼續
+            </button>
+          </div>
+          <div class="actions-right">
+            <button id="btnGoToConfigTemplates" class="btn btn-primary" title="前往對照表新增品類模板">
+              <span class="material-icons">settings</span> 前往設定模板
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: 來源 Excel 缺漏欄位智慧補全 (Column Mapping Modal) -->
     <div id="columnMappingModal" class="modal-overlay hidden">
       <div class="modal-card mapping-modal">
@@ -317,6 +351,7 @@
 
   </div>
 
+  <script src="js/shared_utils.js"></script>
   <script src="js/storage_utils.js"></script>
   <script src="js/templates.js"></script>
   <script src="js/default_config.js"></script>
