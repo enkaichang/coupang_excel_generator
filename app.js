@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.8.0';
+const APP_VERSION = 'v2.12.5';
 
 function normalizeHeaderKey(str) {
   if (window.SharedUtils) return window.SharedUtils.normalizeKey(str);
@@ -12,6 +12,92 @@ function normalizeHeaderKey(str) {
     .replace(/（/g, '(')
     .replace(/）/g, ')')
     .trim();
+}
+
+/**
+ * Helper to escape HTML characters
+ */
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Extract all non-empty column header names from a given worksheet at headerRow
+ */
+function getSheetHeadersList(ws, headerRow = 3) {
+  if (!ws) return [];
+  const headers = [];
+  const range = ws.usedRange();
+  const maxCol = range ? range.endCell().columnNumber() : 70;
+  for (let c = 1; c <= maxCol; c++) {
+    const val = ws.cell(headerRow, c).value();
+    if (val !== null && val !== undefined) {
+      const str = String(val).trim();
+      if (str && !headers.includes(str)) {
+        headers.push(str);
+      }
+    }
+  }
+  return headers;
+}
+
+/**
+ * Standard candidate source Excel header names
+ */
+function getCommonSourceHeaders() {
+  return [
+    '中文背標', '中文品名', '商品名稱', '產品中文名稱', 'TYPE', '品類', '種類', '款式',
+    'COLLECTION', '系列', '中文顏色', 'COLOR', '顏色', 'SIZE', '尺寸',
+    '國際條碼', '原廠貨號', '定價', '售價', '建議售價', '產地', '材質',
+    '適用對象', '洗滌方式', '規格', '重量', '淨重', '條碼'
+  ];
+}
+
+/**
+ * Get all available source header names from active workbook sheet or standard fallbacks
+ */
+function getAvailableSourceHeaders(preferredWs = null, preferredHeaderRow = 3) {
+  if (preferredWs) {
+    const h = getSheetHeadersList(preferredWs, preferredHeaderRow);
+    if (h.length > 0) return h;
+  }
+  if (typeof loadedWorkbook !== 'undefined' && loadedWorkbook) {
+    const ws = (typeof currentSourceConfig !== 'undefined' && currentSourceConfig?.sheet_name)
+      ? (loadedWorkbook.sheet(currentSourceConfig.sheet_name) || loadedWorkbook.sheet(0))
+      : loadedWorkbook.sheet(0);
+    if (ws) {
+      const h = getSheetHeadersList(ws, (typeof currentSourceConfig !== 'undefined' && currentSourceConfig?.header_row) || 3);
+      if (h.length > 0) return h;
+    }
+  }
+  return getCommonSourceHeaders();
+}
+
+/**
+ * Build HTML option tags for column select dropdowns
+ */
+function buildColSelectOptions(headers, currentVal, emptyLabel = '-- 請選擇來源欄位 (未指定則留空) --') {
+  let html = `<option value="">${emptyLabel}</option>`;
+  const seen = new Set();
+  const validHeaders = Array.isArray(headers) && headers.length > 0 ? headers : getCommonSourceHeaders();
+  
+  if (currentVal && !validHeaders.some(h => h.toUpperCase() === String(currentVal).toUpperCase())) {
+    html += `<option value="${escapeHtml(currentVal)}" selected>${escapeHtml(currentVal)} (自訂)</option>`;
+    seen.add(currentVal);
+  }
+
+  validHeaders.forEach(h => {
+    seen.add(h);
+    const isSel = (currentVal && h.toUpperCase() === String(currentVal).toUpperCase()) ? 'selected' : '';
+    html += `<option value="${escapeHtml(h)}" ${isSel}>${escapeHtml(h)}</option>`;
+  });
+  return html;
 }
 
 /**
@@ -134,6 +220,42 @@ function findHeaderColIdx(map, colName) {
     }
   }
   return undefined;
+}
+
+/**
+ * Scan target worksheet and highlight empty cells in '必填' (Required) columns with solid red fill
+ */
+function highlightMissingRequiredCells(worksheet, startRow = 9, endRow = null, reqRow = 6) {
+  if (!worksheet) return;
+  const maxCol = worksheet.usedRange() ? worksheet.usedRange().endCell().columnNumber() : 70;
+  const lastRow = (endRow !== null && endRow !== undefined) ? endRow : (worksheet.usedRange() ? worksheet.usedRange().endCell().rowNumber() : startRow);
+
+  // Find all column indices that are marked as '必填' in reqRow (Row 6)
+  const requiredColIndices = [];
+  for (let c = 1; c <= maxCol; c++) {
+    const reqVal = worksheet.cell(reqRow, c).value();
+    if (reqVal && String(reqVal).trim().includes('必填')) {
+      requiredColIndices.push(c);
+    }
+  }
+
+  if (requiredColIndices.length === 0) return;
+
+  // Scan all data rows and highlight empty required cells
+  for (let r = startRow; r < lastRow; r++) {
+    for (const colIdx of requiredColIndices) {
+      const cell = worksheet.cell(r, colIdx);
+      const val = cell.value();
+      const isEmpty = (val === undefined || val === null || (typeof val === 'string' && val.trim() === '') || (typeof val === 'number' && isNaN(val)));
+      if (isEmpty) {
+        try {
+          cell.style('fill', 'ffff0000');
+        } catch(e) {
+          console.warn(`[Highlight] Failed to style cell at (${r}, ${colIdx}):`, e);
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -636,20 +758,51 @@ document.addEventListener('DOMContentLoaded', async () => {
   const wizardScannedCount = document.getElementById('wizardScannedCount');
   const wizardTableBody = document.getElementById('wizardTableBody');
 
-  // Column Mapping Modal elements
-  const columnMappingModal = document.getElementById('columnMappingModal');
-  const mappingModalClose = document.getElementById('mappingModalClose');
+  // Sidebar Unmatched Type Hint elements
+  const unmatchedTypeHintContainer = document.getElementById('unmatchedTypeHintContainer');
+  const unmatchedTypePillsList = document.getElementById('unmatchedTypePillsList');
+
+  // Excel Upload Wizard elements (兩步驟載入精靈)
+  const excelUploadWizardModal = document.getElementById('excelUploadWizardModal');
+  const uploadWizardClose = document.getElementById('uploadWizardClose');
+  const uploadWizardTitle = document.getElementById('uploadWizardTitle');
+  const wizardStepIndicator1 = document.getElementById('wizardStepIndicator1');
+  const wizardStepIndicator2 = document.getElementById('wizardStepIndicator2');
+  const wizardStepperLine = document.getElementById('wizardStepperLine');
+  const uploadWizardStep1 = document.getElementById('uploadWizardStep1');
+  const uploadWizardStep2 = document.getElementById('uploadWizardStep2');
+  const uploadWizardFileName = document.getElementById('uploadWizardFileName');
+  const wizardSheetSelect = document.getElementById('wizardSheetSelect');
+  const wizardHeaderRow = document.getElementById('wizardHeaderRow');
+  const wizardRowStart = document.getElementById('wizardRowStart');
+  const wizardFilterColumn = document.getElementById('wizardFilterColumn');
   const detectedTemplatesContainer = document.getElementById('detectedTemplatesContainer');
+  const wizardUnmatchedAlertBox = document.getElementById('wizardUnmatchedAlertBox');
+  const wizardUnmatchedTypeCount = document.getElementById('wizardUnmatchedTypeCount');
+  const wizardUnmatchedTotalCount = document.getElementById('wizardUnmatchedTotalCount');
+  const wizardUnmatchedAccordionList = document.getElementById('wizardUnmatchedAccordionList');
+  const btnWizardGoToConfig = document.getElementById('btnWizardGoToConfig');
+  const wizardBrandFixed = document.getElementById('wizardBrandFixed');
+  const wizardManufacturerFixed = document.getElementById('wizardManufacturerFixed');
+  const wizardCollectionColumn = document.getElementById('wizardCollectionColumn');
+  const wizardTypeColumn = document.getElementById('wizardTypeColumn');
+  const wizardColorColumn = document.getElementById('wizardColorColumn');
+  const wizardSizeColumn = document.getElementById('wizardSizeColumn');
   const missingColumnCount = document.getElementById('missingColumnCount');
+  const missingColumnsContainer = document.getElementById('missingColumnsContainer');
   const mappingTableBody = document.getElementById('mappingTableBody');
+  const allColumnsMatchedNotice = document.getElementById('allColumnsMatchedNotice');
   const chkRememberMappings = document.getElementById('chkRememberMappings');
-  const btnCancelMapping = document.getElementById('btnCancelMapping');
-  const btnConfirmMapping = document.getElementById('btnConfirmMapping');
+  const btnWizardPrev = document.getElementById('btnWizardPrev');
+  const btnWizardCancel = document.getElementById('btnWizardCancel');
+  const btnWizardNext = document.getElementById('btnWizardNext');
+  const btnWizardConfirm = document.getElementById('btnWizardConfirm');
 
   // State Variables
   let templateProfiles = [];
   let activeProfileId = 'HARNESS';
   let pendingWizard = null;
+  let lastDetectedUnmatchedTypes = [];
 
   let currentSourceConfig = window.AppConfig.get().source;
 
@@ -744,6 +897,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       profileListContainer.appendChild(btn);
     });
 
+    // 渲染設定檔清單下方缺少 Type 之紅框橢圓形標籤提示
+    if (unmatchedTypeHintContainer && unmatchedTypePillsList) {
+      if (Array.isArray(lastDetectedUnmatchedTypes) && lastDetectedUnmatchedTypes.length > 0) {
+        unmatchedTypeHintContainer.classList.remove('hidden');
+        unmatchedTypePillsList.innerHTML = '';
+        lastDetectedUnmatchedTypes.forEach(item => {
+          const pill = document.createElement('div');
+          pill.className = 'unmatched-type-pill';
+          pill.title = `來源 Excel 中有 ${item.count} 筆商品屬於「${item.type}」，尚未設定專屬模板`;
+          pill.innerHTML = `
+            <span class="material-icons" style="font-size: 0.85rem; color: #dc2626;">label</span>
+            <span>${escapeHtml(item.type)}</span>
+            <span class="pill-count">(${item.count}筆)</span>
+          `;
+          unmatchedTypePillsList.appendChild(pill);
+        });
+      } else {
+        unmatchedTypeHintContainer.classList.add('hidden');
+      }
+    }
+
     renderActiveProfileEditor();
   }
 
@@ -756,12 +930,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     activeProfileId = profile.id;
 
+    const availableHeaders = getAvailableSourceHeaders();
+
     let fixedHtml = '';
     for (const [k, v] of Object.entries(profile.field_mappings?.fixed || {})) {
       fixedHtml += `
         <div class="dynamic-row fixed-field-row">
-          <input type="text" class="key-input" placeholder="目標模板欄位" value="${k}">
-          <input type="text" class="val-input" placeholder="固定填寫內容" value="${v}">
+          <input type="text" class="key-input" placeholder="目標模板欄位" value="${escapeHtml(k)}">
+          <input type="text" class="val-input" placeholder="固定填寫內容" value="${escapeHtml(v)}">
           <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-icons">delete</span></button>
         </div>`;
     }
@@ -770,38 +946,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     for (const [k, v] of Object.entries(profile.field_mappings?.dynamic || {})) {
       dynamicHtml += `
         <div class="dynamic-row dynamic-field-row">
-          <input type="text" class="key-input" placeholder="目標模板欄位" value="${k}">
-          <input type="text" class="val-input" placeholder="來源表對應欄位" value="${v}">
+          <input type="text" class="key-input" placeholder="目標模板欄位" value="${escapeHtml(k)}">
+          <select class="val-input form-select">
+            ${buildColSelectOptions(availableHeaders, v, '-- 請選擇來源表對應欄位 --')}
+          </select>
           <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-icons">delete</span></button>
         </div>`;
     }
 
-    const keywordsStr = Array.isArray(profile.keywords) ? profile.keywords.join(', ') : (profile.keywords || profile.name || '');
+    let currentProfileKeywords = Array.isArray(profile.keywords)
+      ? [...profile.keywords]
+      : (profile.keywords ? String(profile.keywords).split(/[,，]/).map(k => k.trim()).filter(Boolean) : (profile.name ? [profile.name] : []));
 
     profileEditorContent.innerHTML = `
       <div class="profile-meta-card">
         <div class="profile-meta-grid">
           <div class="input-row" style="margin:0;">
             <label style="flex:0 0 110px; font-weight:600;">設定檔名稱:</label>
-            <input type="text" id="prof_name" value="${profile.name || ''}" ${profile.is_builtin ? 'readonly style="background:#f1f5f9;"' : ''}>
+            <input type="text" id="prof_name" value="${escapeHtml(profile.name || '')}" ${profile.is_builtin ? 'readonly style="background:#f1f5f9;"' : ''}>
           </div>
           <div class="input-row" style="margin:0;">
             <label style="flex:0 0 110px; font-weight:600;">輸出子資料夾:</label>
-            <input type="text" id="prof_subfolder" value="${profile.subfolder || profile.name || ''}">
+            <input type="text" id="prof_subfolder" value="${escapeHtml(profile.subfolder || profile.name || '')}">
           </div>
-          <div class="input-row" style="margin:0;">
-            <label style="flex:0 0 110px; font-weight:600;">匹配關鍵字:</label>
-            <input type="text" id="prof_keywords" placeholder="例: HARNESS, 胸背帶 (逗號分隔)" value="${keywordsStr}">
+          <div class="input-row" style="margin:0; align-items:flex-start;">
+            <label style="flex:0 0 110px; font-weight:600; padding-top:6px;">匹配關鍵字:</label>
+            <div class="keyword-tags-wrapper">
+              <div class="keyword-input-group">
+                <input type="text" id="profKeywordInput" placeholder="輸入關鍵字後點擊 + 或按 Enter 新增 (支援逗號分隔)...">
+                <button type="button" id="btnAddProfKeyword" class="btn btn-secondary btn-sm btn-icon" title="新增關鍵字"><span class="material-icons">add</span></button>
+              </div>
+              <div id="profKeywordsTagsContainer" class="keyword-tags-container"></div>
+            </div>
           </div>
           <div class="input-row" style="margin:0;">
             <label style="flex:0 0 110px; font-weight:600;">預設分類代碼:</label>
-            <input type="text" id="prof_category_name" placeholder="例如: 寵物用品>狗用品>牽繩/胸背帶>胸背帶 (66030)" value="${profile.category_name || ''}">
+            <input type="text" id="prof_category_name" placeholder="例如: 寵物用品>狗用品>牽繩/胸背帶>胸背帶 (66030)" value="${escapeHtml(profile.category_name || '')}">
           </div>
         </div>
         <div class="template-file-bar" style="margin-top:12px;">
           <div class="template-file-info">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span>Excel 範本: <strong>${profile.template_file_name || (profile.id + '.xlsx')}</strong></span>
+            <span>Excel 範本: <strong>${escapeHtml(profile.template_file_name || (profile.id + '.xlsx'))}</strong></span>
             <span class="badge-${profile.is_builtin ? 'system' : 'inherited'}">${profile.is_builtin ? '內建範本' : '自訂上傳'}</span>
           </div>
           <div class="template-file-actions">
@@ -836,6 +1022,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       ` : ''}
     `;
+
+    // Render keyword tag pills
+    function renderProfKeywordTags() {
+      const container = document.getElementById('profKeywordsTagsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      if (currentProfileKeywords.length === 0) {
+        container.innerHTML = '<span class="keyword-tag-empty">尚未設定關鍵字（輸入關鍵字後點擊 + 或按 Enter 新增）</span>';
+        return;
+      }
+      currentProfileKeywords.forEach((kw, index) => {
+        const pill = document.createElement('div');
+        pill.className = 'keyword-tag-pill';
+        pill.innerHTML = `
+          <span class="material-icons">label</span>
+          <span>${escapeHtml(kw)}</span>
+          <button type="button" class="keyword-tag-remove" title="移除關鍵字" data-index="${index}">
+            <span class="material-icons">close</span>
+          </button>
+        `;
+        pill.querySelector('.keyword-tag-remove').addEventListener('click', (e) => {
+          e.stopPropagation();
+          currentProfileKeywords.splice(index, 1);
+          renderProfKeywordTags();
+        });
+        container.appendChild(pill);
+      });
+    }
+
+    const btnAddProfKeyword = document.getElementById('btnAddProfKeyword');
+    const profKeywordInput = document.getElementById('profKeywordInput');
+
+    function addProfKeywordFromInput() {
+      if (!profKeywordInput) return;
+      const val = profKeywordInput.value.trim();
+      if (!val) return;
+      const items = val.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+      items.forEach(item => {
+        if (!currentProfileKeywords.includes(item)) {
+          currentProfileKeywords.push(item);
+        }
+      });
+      profKeywordInput.value = '';
+      renderProfKeywordTags();
+    }
+
+    if (btnAddProfKeyword) btnAddProfKeyword.addEventListener('click', addProfKeywordFromInput);
+    if (profKeywordInput) {
+      profKeywordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addProfKeywordFromInput();
+        }
+      });
+    }
+
+    renderProfKeywordTags();
 
     // Hook template actions
     const btnDownloadProfileTemplate = document.getElementById('btnDownloadProfileTemplate');
@@ -889,25 +1132,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
     }
+
+    // Attach profile keyword reference to profile for saving
+    profile._activeKeywords = currentProfileKeywords;
   }
 
   window.addProfileFixedRow = function(k='', v='') {
     const div = document.createElement('div');
     div.className = 'dynamic-row fixed-field-row';
     div.innerHTML = `
-      <input type="text" class="key-input" placeholder="目標模板欄位" value="${k}">
-      <input type="text" class="val-input" placeholder="固定填寫內容" value="${v}">
+      <input type="text" class="key-input" placeholder="目標模板欄位" value="${escapeHtml(k)}">
+      <input type="text" class="val-input" placeholder="固定填寫內容" value="${escapeHtml(v)}">
       <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-icons">delete</span></button>
     `;
     document.getElementById('profileFixedContainer')?.appendChild(div);
   };
 
   window.addProfileDynamicRow = function(k='', v='') {
+    const availableHeaders = getAvailableSourceHeaders();
     const div = document.createElement('div');
     div.className = 'dynamic-row dynamic-field-row';
     div.innerHTML = `
-      <input type="text" class="key-input" placeholder="目標模板欄位" value="${k}">
-      <input type="text" class="val-input" placeholder="來源表對應欄位" value="${v}">
+      <input type="text" class="key-input" placeholder="目標模板欄位" value="${escapeHtml(k)}">
+      <select class="val-input form-select">
+        ${buildColSelectOptions(availableHeaders, v, '-- 請選擇來源表對應欄位 --')}
+      </select>
       <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-icons">delete</span></button>
     `;
     document.getElementById('profileDynamicContainer')?.appendChild(div);
@@ -920,26 +1169,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const nameInput = document.getElementById('prof_name');
     const subfolderInput = document.getElementById('prof_subfolder');
     const categoryInput = document.getElementById('prof_category_name');
-    const keywordsInput = document.getElementById('prof_keywords');
 
     if (nameInput && !profile.is_builtin) profile.name = nameInput.value.trim();
     if (subfolderInput) profile.subfolder = subfolderInput.value.trim() || profile.name;
     if (categoryInput) profile.category_name = categoryInput.value.trim();
-    if (keywordsInput) {
-      profile.keywords = keywordsInput.value.split(/[,，]/).map(k => k.trim()).filter(Boolean);
+
+    if (Array.isArray(profile._activeKeywords)) {
+      profile.keywords = profile._activeKeywords.length > 0 ? [...profile._activeKeywords] : [profile.name || ''];
     }
 
     const fixed = {};
     document.querySelectorAll('#profileFixedContainer .fixed-field-row').forEach(row => {
-      const k = row.querySelector('.key-input').value.trim();
-      const v = row.querySelector('.val-input').value.trim();
+      const k = row.querySelector('.key-input')?.value.trim();
+      const v = row.querySelector('.val-input')?.value.trim();
       if (k) fixed[k] = v;
     });
 
     const dynamic = {};
     document.querySelectorAll('#profileDynamicContainer .dynamic-field-row').forEach(row => {
-      const k = row.querySelector('.key-input').value.trim();
-      const v = row.querySelector('.val-input').value.trim();
+      const k = row.querySelector('.key-input')?.value.trim();
+      const v = row.querySelector('.val-input')?.value.trim();
       if (k) dynamic[k] = v;
     });
 
@@ -973,13 +1222,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>`;
     }
 
+    const allSheets = (loadedWorkbook && loadedWorkbook.sheets) ? loadedWorkbook.sheets() : [];
+    let sheetOptionsHtml = '';
+    if (allSheets.length > 0) {
+      allSheets.forEach(s => {
+        const rCount = s.usedRange() ? s.usedRange().endCell().rowNumber() : 0;
+        const isSel = s.name() === (source.sheet_name || 'Sheet1') ? 'selected' : '';
+        sheetOptionsHtml += `<option value="${escapeHtml(s.name())}" ${isSel}>${escapeHtml(s.name())} (${rCount > 0 ? `共 ${rCount} 列` : '空白工作表'})</option>`;
+      });
+    } else {
+      const defaultSheets = [source.sheet_name || 'Sheet1', 'Sheet1', '商品資料', '工作表1'];
+      const uniqueSheets = Array.from(new Set(defaultSheets.filter(Boolean)));
+      uniqueSheets.forEach(name => {
+        const isSel = name === (source.sheet_name || 'Sheet1') ? 'selected' : '';
+        sheetOptionsHtml += `<option value="${escapeHtml(name)}" ${isSel}>${escapeHtml(name)}</option>`;
+      });
+    }
+
+    let currentSheetHeaders = [];
+    if (loadedWorkbook) {
+      const ws = loadedWorkbook.sheet(source.sheet_name) || loadedWorkbook.sheet(0);
+      if (ws) {
+        currentSheetHeaders = getSheetHeadersList(ws, source.header_row || 3);
+      }
+    }
+    if (currentSheetHeaders.length === 0) {
+      currentSheetHeaders = getCommonSourceHeaders();
+    }
+
     guiSourceConfigForm.innerHTML = `
       <div class="form-group">
         <h4>來源工作表與行列設定 (Source Sheet & Rows)</h4>
-        <div class="input-row"><label>來源表名稱:</label><input type="text" id="cfg_sheet_name" value="${source.sheet_name || 'Sheet1'}"></div>
-        <div class="input-row"><label>標題列位於第幾列:</label><input type="number" id="cfg_header_row" value="${source.header_row || 3}"></div>
-        <div class="input-row"><label>資料起始列:</label><input type="number" id="cfg_row_start" value="${source.row_start || 4}"></div>
-        <div class="input-row"><label>篩選欄位(有填寫才處理):</label><input type="text" id="cfg_filter_column" value="${source.filter_column || '中文背標'}"></div>
+        <div class="input-row">
+          <label>來源表名稱:</label>
+          <select id="cfg_sheet_name" class="form-select">${sheetOptionsHtml}</select>
+        </div>
+        <div class="input-row">
+          <label>標題列位於第幾列:</label>
+          <input type="number" id="cfg_header_row" value="${source.header_row || 3}" min="1">
+        </div>
+        <div class="input-row">
+          <label>資料起始列:</label>
+          <input type="number" id="cfg_row_start" value="${source.row_start || 4}" min="1">
+        </div>
+        <div class="input-row">
+          <label>篩選欄位(有填寫才處理):</label>
+          <select id="cfg_filter_column" class="form-select">${buildColSelectOptions(currentSheetHeaders, source.filter_column || '中文背標', '-- 不啟用篩選 (處理全部列) --')}</select>
+        </div>
       </div>
 
       <div class="form-group">
@@ -988,27 +1277,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         <div class="input-row">
           <label style="flex:0 0 140px;">全域固定品牌 (選填):</label>
-          <input type="text" id="cfg_brand_fixed" value="${source.brand_fixed || ''}" placeholder="例如: RUKKA，未填寫則留空">
+          <input type="text" id="cfg_brand_fixed" value="${escapeHtml(source.brand_fixed || '')}" placeholder="例如: RUKKA，未填寫則留空">
         </div>
         <div class="input-row">
           <label style="flex:0 0 140px;">全域固定製造商 (選填):</label>
-          <input type="text" id="cfg_manufacturer_fixed" value="${source.manufacturer_fixed || ''}" placeholder="未填寫且無設定時預設自動採用品牌">
+          <input type="text" id="cfg_manufacturer_fixed" value="${escapeHtml(source.manufacturer_fixed || '')}" placeholder="未填寫且無設定時預設自動採用品牌">
         </div>
         <div class="input-row">
           <label style="flex:0 0 140px;">系列來源欄位 (Collection):</label>
-          <input type="text" id="cfg_collection_column" value="${source.collection_column || 'COLLECTION'}" placeholder="例如: COLLECTION 或 系列">
+          <select id="cfg_collection_column" class="form-select">${buildColSelectOptions(currentSheetHeaders, source.collection_column || 'COLLECTION')}</select>
         </div>
         <div class="input-row">
           <label style="flex:0 0 140px;">品類來源欄位 (Type):</label>
-          <input type="text" id="cfg_type_column" value="${source.type_column || 'TYPE'}" placeholder="例如: TYPE 或 品類">
+          <select id="cfg_type_column" class="form-select">${buildColSelectOptions(currentSheetHeaders, source.type_column || 'TYPE')}</select>
         </div>
         <div class="input-row">
           <label style="flex:0 0 140px;">顏色來源欄位 (Color):</label>
-          <input type="text" id="cfg_color_column" value="${source.color_column || '中文顏色'}" placeholder="例如: 中文顏色 或 COLOR">
+          <select id="cfg_color_column" class="form-select">${buildColSelectOptions(currentSheetHeaders, source.color_column || '中文顏色')}</select>
         </div>
         <div class="input-row">
           <label style="flex:0 0 140px;">尺寸來源欄位 (Size):</label>
-          <input type="text" id="cfg_size_column" value="${source.size_column || 'SIZE'}" placeholder="例如: SIZE 或 尺寸">
+          <select id="cfg_size_column" class="form-select">${buildColSelectOptions(currentSheetHeaders, source.size_column || 'SIZE')}</select>
         </div>
       </div>
 
@@ -1021,6 +1310,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div id="sourceFixedContainer">${sourceFixedHtml}</div>
       </div>
     `;
+
+    // Dynamic re-population of columns when cfg_sheet_name or cfg_header_row changes
+    const cfgSheetSelect = document.getElementById('cfg_sheet_name');
+    const cfgHeaderInput = document.getElementById('cfg_header_row');
+    const updateColumnDropdowns = () => {
+      if (!loadedWorkbook) return;
+      const wsName = cfgSheetSelect ? cfgSheetSelect.value : source.sheet_name;
+      const hRow = cfgHeaderInput ? (parseInt(cfgHeaderInput.value) || 3) : 3;
+      const ws = loadedWorkbook.sheet(wsName) || loadedWorkbook.sheet(0);
+      if (ws) {
+        const headers = getSheetHeadersList(ws, hRow);
+        if (headers.length > 0) {
+          const updateSelect = (id, curVal, emptyLabel) => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = buildColSelectOptions(headers, el.value || curVal, emptyLabel);
+          };
+          updateSelect('cfg_filter_column', source.filter_column || '中文背標', '-- 不啟用篩選 (處理全部列) --');
+          updateSelect('cfg_collection_column', source.collection_column || 'COLLECTION');
+          updateSelect('cfg_type_column', source.type_column || 'TYPE');
+          updateSelect('cfg_color_column', source.color_column || '中文顏色');
+          updateSelect('cfg_size_column', source.size_column || 'SIZE');
+        }
+      }
+    };
+    if (cfgSheetSelect) cfgSheetSelect.addEventListener('change', updateColumnDropdowns);
+    if (cfgHeaderInput) cfgHeaderInput.addEventListener('input', updateColumnDropdowns);
   }
 
   function parseSourceConfig() {
@@ -1048,6 +1363,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Wizard Launch & Confirmation
+  let pendingWizardKeywords = [];
+
   if (btnOpenUploadWizard && uploadTemplateFileInput) {
     btnOpenUploadWizard.addEventListener('click', () => {
       uploadTemplateFileInput.click();
@@ -1068,8 +1385,68 @@ document.addEventListener('DOMContentLoaded', async () => {
           wizardSubfolder.value = defaultName;
           wizardScannedCount.textContent = scanResult.requiredColumns.length;
 
+          // Initialize wizard keyword tag chips
+          pendingWizardKeywords = [defaultName];
+          const wizardKeywordsTagsContainer = document.getElementById('wizardKeywordsTagsContainer');
+          const wizardKeywordInput = document.getElementById('wizardKeywordInput');
+          const btnAddWizardKeyword = document.getElementById('btnAddWizardKeyword');
+
+          function renderWizardKeywordsTags() {
+            if (!wizardKeywordsTagsContainer) return;
+            wizardKeywordsTagsContainer.innerHTML = '';
+            if (pendingWizardKeywords.length === 0) {
+              wizardKeywordsTagsContainer.innerHTML = '<span class="keyword-tag-empty">尚未設定關鍵字（輸入關鍵字後點擊 + 或按 Enter 新增）</span>';
+              return;
+            }
+            pendingWizardKeywords.forEach((kw, index) => {
+              const pill = document.createElement('div');
+              pill.className = 'keyword-tag-pill';
+              pill.innerHTML = `
+                <span class="material-icons">label</span>
+                <span>${escapeHtml(kw)}</span>
+                <button type="button" class="keyword-tag-remove" title="移除關鍵字" data-index="${index}">
+                  <span class="material-icons">close</span>
+                </button>
+              `;
+              pill.querySelector('.keyword-tag-remove').addEventListener('click', (e) => {
+                e.stopPropagation();
+                pendingWizardKeywords.splice(index, 1);
+                renderWizardKeywordsTags();
+              });
+              wizardKeywordsTagsContainer.appendChild(pill);
+            });
+          }
+
+          function addWizardKeywordFromInput() {
+            if (!wizardKeywordInput) return;
+            const val = wizardKeywordInput.value.trim();
+            if (!val) return;
+            const items = val.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+            items.forEach(item => {
+              if (!pendingWizardKeywords.includes(item)) {
+                pendingWizardKeywords.push(item);
+              }
+            });
+            wizardKeywordInput.value = '';
+            renderWizardKeywordsTags();
+          }
+
+          if (btnAddWizardKeyword) {
+            btnAddWizardKeyword.onclick = addWizardKeywordFromInput;
+          }
+          if (wizardKeywordInput) {
+            wizardKeywordInput.onkeydown = (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addWizardKeywordFromInput();
+              }
+            };
+          }
+          renderWizardKeywordsTags();
+
           wizardTableBody.innerHTML = '';
 
+          const availableHeaders = getAvailableSourceHeaders();
           const newCols = scanResult.requiredColumns.filter(c => c.status === 'new');
           const inheritedCols = scanResult.requiredColumns.filter(c => c.status === 'inherited');
           const systemCols = scanResult.requiredColumns.filter(c => c.status === 'system');
@@ -1144,24 +1521,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </select>
                   </td>
                   <td>
-                    <input type="text" class="wizard-val-input" value="${escapeHtml(col.defaultValue || '')}" placeholder="${col.mappingType === 'dynamic' ? '來源表欄位名 (例: 中文品名)' : '固定填寫內容'}" ${isSys ? 'disabled' : ''}>
+                    <select class="wizard-val-select form-select ${col.mappingType !== 'dynamic' ? 'hidden' : ''}" ${isSys ? 'disabled' : ''}>
+                      ${buildColSelectOptions(availableHeaders, col.defaultValue || '', '-- 請選擇來源表欄位 --')}
+                    </select>
+                    <input type="text" class="wizard-val-input ${col.mappingType !== 'fixed' ? 'hidden' : ''}" value="${escapeHtml(col.defaultValue || '')}" placeholder="固定填寫內容" ${isSys ? 'disabled' : ''}>
+                    <input type="text" class="wizard-val-sys ${col.mappingType !== 'system' ? 'hidden' : ''}" value="(系統自動處理)" disabled>
                   </td>
                 `;
 
                 const select = tr.querySelector('.wizard-type-select');
-                const input = tr.querySelector('.wizard-val-input');
+                const valSelect = tr.querySelector('.wizard-val-select');
+                const valInput = tr.querySelector('.wizard-val-input');
+                const valSys = tr.querySelector('.wizard-val-sys');
+
                 select.addEventListener('change', () => {
                   if (select.value === 'dynamic') {
-                    input.disabled = false;
-                    input.placeholder = '來源表欄位名 (例: 中文品名)';
-                    if (input.value === '(系統自動處理)') input.value = '';
+                    if (valSelect) { valSelect.classList.remove('hidden'); valSelect.disabled = false; }
+                    if (valInput) valInput.classList.add('hidden');
+                    if (valSys) valSys.classList.add('hidden');
                   } else if (select.value === 'fixed') {
-                    input.disabled = false;
-                    input.placeholder = '固定填寫內容';
-                    if (input.value === '(系統自動處理)') input.value = '';
+                    if (valSelect) valSelect.classList.add('hidden');
+                    if (valInput) { valInput.classList.remove('hidden'); valInput.disabled = false; }
+                    if (valSys) valSys.classList.add('hidden');
                   } else {
-                    input.disabled = true;
-                    input.value = '(系統自動處理)';
+                    if (valSelect) valSelect.classList.add('hidden');
+                    if (valInput) valInput.classList.add('hidden');
+                    if (valSys) { valSys.classList.remove('hidden'); valSys.disabled = true; }
                   }
                 });
 
@@ -1229,22 +1614,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       itemRows.forEach(tr => {
         const colName = tr.dataset.colName;
         const typeSelect = tr.querySelector('.wizard-type-select');
+        const valSelect = tr.querySelector('.wizard-val-select');
         const valInput = tr.querySelector('.wizard-val-input');
-        if (!colName || !typeSelect || !valInput) return;
+        if (!colName || !typeSelect) return;
 
         const mType = typeSelect.value;
-        const val = valInput.value.trim();
-
-        if (mType === 'dynamic' && val) {
-          dynamic[colName] = val;
-        } else if (mType === 'fixed') {
-          fixed[colName] = val;
+        if (mType === 'dynamic' && valSelect) {
+          const val = valSelect.value.trim();
+          if (val) dynamic[colName] = val;
+        } else if (mType === 'fixed' && valInput) {
+          const val = valInput.value.trim();
+          if (val) fixed[colName] = val;
         }
       });
 
       const profileId = 'profile_' + Date.now();
-      const kwStr = (wizardKeywords ? wizardKeywords.value : '').trim();
-      const keywords = kwStr ? kwStr.split(/[,，]/).map(k => k.trim()).filter(Boolean) : [profName];
+      const keywords = pendingWizardKeywords.length > 0 ? [...pendingWizardKeywords] : [profName];
 
       const newProfile = {
         id: profileId,
@@ -1435,151 +1820,451 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Column Mapping Modal for Missing Fields
-  function showColumnMappingModal(detectedProfiles, missingItems, excelHeaderNames) {
+  // 來源 Excel 載入與智慧檢查兩步驟精靈 (2-Step Excel Upload Wizard)
+  function showExcelUploadWizard(file, wb) {
     return new Promise((resolve) => {
-      if (!columnMappingModal) {
+      if (!excelUploadWizardModal) {
         resolve({ action: 'cancel' });
         return;
       }
 
-      // Render detected templates badges
-      if (detectedTemplatesContainer) {
-        detectedTemplatesContainer.innerHTML = '';
-        detectedProfiles.forEach(p => {
-          const badge = document.createElement('span');
-          badge.className = 'badge-template';
-          badge.textContent = p.name;
-          detectedTemplatesContainer.appendChild(badge);
-        });
+      // Step 1: Initialize Sheets and Row settings
+      if (uploadWizardFileName) {
+        uploadWizardFileName.textContent = file.name;
       }
 
-      // Render count
-      if (missingColumnCount) {
-        missingColumnCount.textContent = missingItems.length;
+      const allSheets = wb.sheets ? wb.sheets() : [];
+      let defaultWs = null;
+      if (window.SharedUtils) {
+        defaultWs = window.SharedUtils.getSourceSheet(wb, currentSourceConfig?.sheet_name, currentSourceConfig?.header_row || 3);
+      } else {
+        defaultWs = wb.sheet(currentSourceConfig?.sheet_name) || wb.sheet(0);
       }
+      const defaultSheetName = defaultWs ? defaultWs.name() : (allSheets[0] ? allSheets[0].name() : 'Sheet1');
 
-      // Render table rows
-      if (mappingTableBody) {
-        mappingTableBody.innerHTML = '';
-        missingItems.forEach(item => {
-          const tr = document.createElement('tr');
-
-          const tdTarget = document.createElement('td');
-          tdTarget.innerHTML = `<span class="mapping-target-name">${item.targetField}</span>`;
-
-          const tdProfiles = document.createElement('td');
-          tdProfiles.textContent = item.profiles.map(p => p.name).join('、');
-
-          const tdExpected = document.createElement('td');
-          tdExpected.innerHTML = `<span class="mapping-expected-name">${item.expectedSourceCol}</span>`;
-
-          const tdSelect = document.createElement('td');
-          const box = document.createElement('div');
-          box.className = 'mapping-select-box';
-
-          const select = document.createElement('select');
-          select.className = 'mapping-col-select';
-          select.dataset.key = item.key;
-
-          const defaultOpt = document.createElement('option');
-          defaultOpt.value = '';
-          defaultOpt.textContent = '-- 請選擇對應的來源 Excel 欄位 --';
-          select.appendChild(defaultOpt);
-
-          excelHeaderNames.forEach(h => {
-            const opt = document.createElement('option');
-            opt.value = h;
-            opt.textContent = (h === item.suggestion) ? `${h} (推薦比對)` : h;
-            if (h === item.suggestion) {
-              opt.selected = true;
-            }
-            select.appendChild(opt);
-          });
-
-          if (!item.isFilter) {
-            const skipOpt = document.createElement('option');
-            skipOpt.value = '__SKIP__';
-            skipOpt.textContent = '【留空 / 略過此欄位】';
-            select.appendChild(skipOpt);
-
-            const fixedOpt = document.createElement('option');
-            fixedOpt.value = '__FIXED__';
-            fixedOpt.textContent = '【手動輸入固定值...】';
-            select.appendChild(fixedOpt);
+      if (wizardSheetSelect) {
+        wizardSheetSelect.innerHTML = '';
+        allSheets.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.name();
+          const rCount = s.usedRange() ? s.usedRange().endCell().rowNumber() : 0;
+          opt.textContent = `${s.name()} (${rCount > 0 ? `共 ${rCount} 列` : '空白工作表'})`;
+          if (s.name() === defaultSheetName) {
+            opt.selected = true;
           }
-
-          box.appendChild(select);
-
-          const fixedInput = document.createElement('input');
-          fixedInput.type = 'text';
-          fixedInput.className = 'mapping-fixed-input hidden';
-          fixedInput.placeholder = `請輸入「${item.targetField}」的固定值內容...`;
-          box.appendChild(fixedInput);
-
-          select.addEventListener('change', () => {
-            if (select.value === '__FIXED__') {
-              fixedInput.classList.remove('hidden');
-              fixedInput.focus();
-            } else {
-              fixedInput.classList.add('hidden');
-            }
-          });
-
-          tdSelect.appendChild(box);
-
-          tr.appendChild(tdTarget);
-          tr.appendChild(tdProfiles);
-          tr.appendChild(tdExpected);
-          tr.appendChild(tdSelect);
-          mappingTableBody.appendChild(tr);
+          wizardSheetSelect.appendChild(opt);
         });
       }
 
-      columnMappingModal.classList.remove('hidden');
+      if (wizardHeaderRow) wizardHeaderRow.value = currentSourceConfig?.header_row || 3;
+      if (wizardRowStart) wizardRowStart.value = currentSourceConfig?.row_start || 4;
+
+      function updateWizardStep1FilterOptions() {
+        const selSheetName = wizardSheetSelect ? wizardSheetSelect.value : defaultSheetName;
+        const hRow = parseInt(wizardHeaderRow?.value) || 3;
+        const targetWs = wb.sheet(selSheetName);
+        let headers = [];
+        if (targetWs) {
+          headers = getSheetHeadersList(targetWs, hRow);
+        }
+        if (headers.length === 0) {
+          headers = getCommonSourceHeaders();
+        }
+        if (wizardFilterColumn) {
+          const curVal = wizardFilterColumn.value || currentSourceConfig?.filter_column || '中文背標';
+          wizardFilterColumn.innerHTML = buildColSelectOptions(headers, curVal, '-- 不啟用篩選 (處理全部列) --');
+        }
+      }
+
+      updateWizardStep1FilterOptions();
+      if (wizardSheetSelect) wizardSheetSelect.addEventListener('change', updateWizardStep1FilterOptions);
+      if (wizardHeaderRow) wizardHeaderRow.addEventListener('input', updateWizardStep1FilterOptions);
+
+      // Set Stepper to Step 1
+      function setStepperView(step) {
+        if (step === 1) {
+          if (wizardStepIndicator1) wizardStepIndicator1.className = 'stepper-step active';
+          if (wizardStepIndicator2) wizardStepIndicator2.className = 'stepper-step';
+          if (wizardStepperLine) wizardStepperLine.className = 'stepper-line';
+          if (uploadWizardStep1) uploadWizardStep1.classList.remove('hidden');
+          if (uploadWizardStep2) uploadWizardStep2.classList.add('hidden');
+          if (btnWizardPrev) btnWizardPrev.classList.add('hidden');
+          if (btnWizardNext) btnWizardNext.classList.remove('hidden');
+          if (btnWizardConfirm) btnWizardConfirm.classList.add('hidden');
+        } else if (step === 2) {
+          if (wizardStepIndicator1) wizardStepIndicator1.className = 'stepper-step completed';
+          if (wizardStepIndicator2) wizardStepIndicator2.className = 'stepper-step active';
+          if (wizardStepperLine) wizardStepperLine.className = 'stepper-line active';
+          if (uploadWizardStep1) uploadWizardStep1.classList.add('hidden');
+          if (uploadWizardStep2) uploadWizardStep2.classList.remove('hidden');
+          if (btnWizardPrev) btnWizardPrev.classList.remove('hidden');
+          if (btnWizardNext) btnWizardNext.classList.add('hidden');
+          if (btnWizardConfirm) btnWizardConfirm.classList.remove('hidden');
+        }
+      }
+
+      setStepperView(1);
+      excelUploadWizardModal.classList.remove('hidden');
+
+      let currentStep2Data = {
+        ws: null,
+        totalR: 0,
+        selectedSheetName: defaultSheetName,
+        selectedHeaderRow: 3,
+        selectedRowStart: 4,
+        selectedFilterCol: '中文背標',
+        detectedProfiles: [],
+        missingItems: [],
+        excelHeaderNames: [],
+        unmatchedItems: [],
+        unmatchedGroups: []
+      };
 
       function cleanup() {
-        columnMappingModal.classList.add('hidden');
-        btnConfirmMapping.removeEventListener('click', onConfirm);
-        btnCancelMapping.removeEventListener('click', onCancel);
-        mappingModalClose.removeEventListener('click', onCancel);
+        excelUploadWizardModal.classList.add('hidden');
+        if (btnWizardNext) btnWizardNext.removeEventListener('click', onNext);
+        if (btnWizardPrev) btnWizardPrev.removeEventListener('click', onPrev);
+        if (btnWizardConfirm) btnWizardConfirm.removeEventListener('click', onConfirm);
+        if (btnWizardCancel) btnWizardCancel.removeEventListener('click', onCancel);
+        if (uploadWizardClose) uploadWizardClose.removeEventListener('click', onCancel);
+        if (btnWizardGoToConfig) btnWizardGoToConfig.removeEventListener('click', onGoToConfig);
+        if (wizardSheetSelect) wizardSheetSelect.removeEventListener('change', updateWizardStep1FilterOptions);
+        if (wizardHeaderRow) wizardHeaderRow.removeEventListener('input', updateWizardStep1FilterOptions);
       }
 
-      function onConfirm() {
-        const mappings = {};
-        const rows = mappingTableBody.querySelectorAll('tr');
-        let hasUnselected = false;
+      // Step 2 Live Template Detection & Unmatched Type Re-calculation
+      function updateStep2TemplateDetection() {
+        if (!currentStep2Data.ws) return;
 
-        rows.forEach((r, idx) => {
-          const item = missingItems[idx];
-          const select = r.querySelector('.mapping-col-select');
-          const fixedInput = r.querySelector('.mapping-fixed-input');
-          const val = select.value;
+        const ws = currentStep2Data.ws;
+        const selectedSheetName = currentStep2Data.selectedSheetName;
+        const selectedHeaderRow = currentStep2Data.selectedHeaderRow;
+        const selectedRowStart = currentStep2Data.selectedRowStart;
+        const totalR = currentStep2Data.totalR;
 
-          if (!val) {
-            hasUnselected = true;
-            select.style.borderColor = '#ef4444';
-          } else {
-            select.style.borderColor = '';
+        const selectedFilterCol = wizardFilterColumn ? wizardFilterColumn.value.trim() : (currentSourceConfig?.filter_column || '中文背標');
+        const selectedTypeCol = wizardTypeColumn ? wizardTypeColumn.value.trim() : (currentSourceConfig?.type_column || 'TYPE');
+        const selectedCollecCol = wizardCollectionColumn ? wizardCollectionColumn.value.trim() : (currentSourceConfig?.collection_column || 'COLLECTION');
+        const selectedColorCol = wizardColorColumn ? wizardColorColumn.value.trim() : (currentSourceConfig?.color_column || '中文顏色');
+        const selectedSizeCol = wizardSizeColumn ? wizardSizeColumn.value.trim() : (currentSourceConfig?.size_column || 'SIZE');
+
+        const tempSourceConfig = {
+          ...currentSourceConfig,
+          sheet_name: selectedSheetName,
+          header_row: selectedHeaderRow,
+          row_start: selectedRowStart,
+          filter_column: selectedFilterCol,
+          type_column: selectedTypeCol,
+          collection_column: selectedCollecCol,
+          color_column: selectedColorCol,
+          size_column: selectedSizeCol
+        };
+
+        // Clone template profiles and overlay any mappings currently chosen in mappingTableBody
+        const tempProfiles = templateProfiles.map(p => ({
+          ...p,
+          field_mappings: {
+            dynamic: { ...(p.field_mappings?.dynamic || {}) },
+            fixed: { ...(p.field_mappings?.fixed || {}) }
           }
+        }));
 
-          if (val === '__SKIP__') {
-            mappings[item.key] = { type: 'skip', value: '', isFilter: item.isFilter, profiles: item.profiles };
-          } else if (val === '__FIXED__') {
-            mappings[item.key] = { type: 'fixed', value: (fixedInput.value || '').trim(), isFilter: item.isFilter, profiles: item.profiles };
-          } else {
-            mappings[item.key] = { type: 'column', value: val, isFilter: item.isFilter, profiles: item.profiles };
+        if (mappingTableBody && currentStep2Data.missingItems) {
+          const rows = mappingTableBody.querySelectorAll('tr');
+          rows.forEach((r, idx) => {
+            const item = currentStep2Data.missingItems[idx];
+            if (!item) return;
+            const select = r.querySelector('.mapping-col-select');
+            const val = select ? select.value : '';
+            if (val && val !== '__SKIP__' && val !== '__FIXED__') {
+              for (const prof of item.profiles || []) {
+                const tp = tempProfiles.find(p => p.id === prof.id);
+                if (tp) {
+                  tp.field_mappings.dynamic[item.targetField] = val;
+                }
+              }
+            }
+          });
+        }
+
+        const detectResult = detectRequiredTemplates(ws, selectedHeaderRow, selectedRowStart, totalR, tempProfiles, tempSourceConfig);
+        const detectedProfiles = Array.isArray(detectResult) ? detectResult : (detectResult.detectedProfiles || tempProfiles);
+        const unmatchedItems = Array.isArray(detectResult) ? [] : (detectResult.unmatchedItems || []);
+
+        // Aggregate unmatched items by Type
+        const typeCountMap = new Map();
+        unmatchedItems.forEach(item => {
+          const rawType = (item.type || '').toString().trim();
+          const t = rawType !== '' ? rawType : '(未填寫 / 空白)';
+          if (!typeCountMap.has(t)) {
+            typeCountMap.set(t, { type: t, rawType, isUntyped: rawType === '', items: [] });
           }
+          typeCountMap.get(t).items.push(item);
         });
+        const unmatchedGroups = Array.from(typeCountMap.values()).sort((a, b) => b.items.length - a.items.length);
+        lastDetectedUnmatchedTypes = unmatchedGroups.map(g => ({ type: g.type, count: g.items.length }));
 
-        if (hasUnselected) {
-          alert('請為所有缺漏欄位選取對應來源、或選擇「留空」/「手動輸入固定值」！');
+        currentStep2Data.detectedProfiles = detectedProfiles;
+        currentStep2Data.unmatchedItems = unmatchedItems;
+        currentStep2Data.unmatchedGroups = unmatchedGroups;
+
+        // 1. Re-render detected templates
+        if (detectedTemplatesContainer) {
+          detectedTemplatesContainer.innerHTML = '';
+          detectedProfiles.forEach(p => {
+            const badge = document.createElement('span');
+            badge.className = 'badge-template';
+            badge.innerHTML = `<span class="material-icons" style="font-size: 0.85rem;">category</span><span>${escapeHtml(p.name)}</span>`;
+            detectedTemplatesContainer.appendChild(badge);
+          });
+        }
+
+        // 2. Re-render unmatched alert box
+        if (wizardUnmatchedAlertBox) {
+          if (unmatchedItems.length > 0) {
+            wizardUnmatchedAlertBox.classList.remove('hidden');
+            if (wizardUnmatchedTypeCount) wizardUnmatchedTypeCount.textContent = unmatchedGroups.length;
+            if (wizardUnmatchedTotalCount) wizardUnmatchedTotalCount.textContent = unmatchedItems.length;
+
+            if (wizardUnmatchedAccordionList) {
+              wizardUnmatchedAccordionList.innerHTML = '';
+              unmatchedGroups.forEach(g => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'wizard-unmatched-accordion-item';
+
+                const headDiv = document.createElement('div');
+                headDiv.className = 'wizard-unmatched-type-head';
+                headDiv.innerHTML = `
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span class="material-icons" style="font-size:0.95rem; color:#f59e0b;">label</span>
+                    <span>${g.isUntyped ? '<em>(未填寫 / 空白)</em>' : `<strong>${escapeHtml(g.type)}</strong>`}</span>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span class="unmatched-count-badge">${g.items.length} 筆</span>
+                    <span class="material-icons toggle-icon" style="font-size:1.1rem; transition: transform 0.2s;">expand_more</span>
+                  </div>
+                `;
+
+                const detailDiv = document.createElement('div');
+                detailDiv.className = 'wizard-unmatched-detail-pane hidden';
+                const itemsHtml = g.items.map(it => `
+                  <div class="unmatched-sub-item">
+                    <span class="unmatched-row-badge">第 ${it.row} 列</span>
+                    <span class="unmatched-sub-item-name">${escapeHtml(it.name)}</span>
+                  </div>
+                `).join('');
+                detailDiv.innerHTML = itemsHtml;
+
+                headDiv.addEventListener('click', () => {
+                  const isHidden = detailDiv.classList.contains('hidden');
+                  const toggleIcon = headDiv.querySelector('.toggle-icon');
+                  if (isHidden) {
+                    detailDiv.classList.remove('hidden');
+                    if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
+                  } else {
+                    detailDiv.classList.add('hidden');
+                    if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
+                  }
+                });
+
+                itemDiv.appendChild(headDiv);
+                itemDiv.appendChild(detailDiv);
+                wizardUnmatchedAccordionList.appendChild(itemDiv);
+              });
+            }
+          } else {
+            wizardUnmatchedAlertBox.classList.add('hidden');
+          }
+        }
+      }
+
+      function onNext() {
+        const selectedSheetName = wizardSheetSelect ? wizardSheetSelect.value : defaultSheetName;
+        const selectedHeaderRow = parseInt(wizardHeaderRow?.value) || 3;
+        const selectedRowStart = parseInt(wizardRowStart?.value) || 4;
+        const selectedFilterCol = wizardFilterColumn ? wizardFilterColumn.value.trim() : '中文背標';
+
+        const ws = wb.sheet(selectedSheetName);
+        if (!ws || !ws.usedRange()) {
+          alert(`工作表「${selectedSheetName}」中找不到任何有效資料，請重新選擇工作表！`);
           return;
         }
 
-        const remember = chkRememberMappings ? chkRememberMappings.checked : true;
+        const totalR = ws.usedRange().endCell().rowNumber();
+        if (selectedHeaderRow >= totalR) {
+          alert(`標題列設定為第 ${selectedHeaderRow} 列，已超出或等於工作表總列數 (${totalR} 列)，請確認標題列位置！`);
+          return;
+        }
+
+        const tempSourceConfig = {
+          ...currentSourceConfig,
+          sheet_name: selectedSheetName,
+          header_row: selectedHeaderRow,
+          row_start: selectedRowStart,
+          filter_column: selectedFilterCol
+        };
+
+        // Check missing columns
+        const checkResult = checkMissingColumns(templateProfiles, ws, selectedHeaderRow, tempSourceConfig);
+        const missingItems = checkResult.missingItems || [];
+        const excelHeaderNames = checkResult.excelHeaderNames || [];
+
+        currentStep2Data = {
+          ws,
+          totalR,
+          selectedSheetName,
+          selectedHeaderRow,
+          selectedRowStart,
+          selectedFilterCol,
+          detectedProfiles: [],
+          unmatchedItems: [],
+          unmatchedGroups: [],
+          missingItems,
+          excelHeaderNames
+        };
+
+        // 3. Global Attributes & Dynamic Mappings
+        if (wizardBrandFixed) wizardBrandFixed.value = currentSourceConfig?.brand_fixed || '';
+        if (wizardManufacturerFixed) wizardManufacturerFixed.value = currentSourceConfig?.manufacturer_fixed || '';
+
+        function populateColSelect(selEl, currentVal, fallbackKeys = []) {
+          if (!selEl) return;
+          selEl.innerHTML = '';
+          const emptyOpt = document.createElement('option');
+          emptyOpt.value = '';
+          emptyOpt.textContent = '-- 請選擇來源欄位 (未指定則留空) --';
+          selEl.appendChild(emptyOpt);
+
+          let hasSelected = false;
+          excelHeaderNames.forEach(h => {
+            const opt = document.createElement('option');
+            opt.value = h;
+            const isDirect = (currentVal && h.toUpperCase() === currentVal.toUpperCase());
+            const isFallback = (!currentVal && fallbackKeys.some(k => k.toUpperCase() === h.toUpperCase()));
+            if (isDirect || isFallback) {
+              opt.textContent = `${h} (推薦比對)`;
+              if (!hasSelected) {
+                opt.selected = true;
+                hasSelected = true;
+              }
+            } else {
+              opt.textContent = h;
+            }
+            selEl.appendChild(opt);
+          });
+        }
+
+        populateColSelect(wizardCollectionColumn, currentSourceConfig?.collection_column, ['COLLECTION', '系列', 'Collection', '系列名稱']);
+        populateColSelect(wizardTypeColumn, currentSourceConfig?.type_column, ['TYPE', '品類', '種類', '款式', 'Type', '類別']);
+        populateColSelect(wizardColorColumn, currentSourceConfig?.color_column, ['中文顏色', 'COLOR', '顏色', 'Color', '顏色名稱']);
+        populateColSelect(wizardSizeColumn, currentSourceConfig?.size_column, ['SIZE', '尺寸', 'Size', '規格尺寸']);
+
+        // 4. Missing columns list
+        if (missingColumnCount) missingColumnCount.textContent = missingItems.length;
+
+        if (missingItems.length > 0) {
+          if (missingColumnsContainer) missingColumnsContainer.classList.remove('hidden');
+          if (allColumnsMatchedNotice) allColumnsMatchedNotice.classList.add('hidden');
+
+          if (mappingTableBody) {
+            mappingTableBody.innerHTML = '';
+            missingItems.forEach(item => {
+              const tr = document.createElement('tr');
+
+              const tdTarget = document.createElement('td');
+              tdTarget.innerHTML = `<span class="mapping-target-name">${escapeHtml(item.targetField)}</span>`;
+
+              const tdProfiles = document.createElement('td');
+              tdProfiles.textContent = item.profiles.map(p => p.name).join('、');
+
+              const tdExpected = document.createElement('td');
+              tdExpected.innerHTML = `<span class="mapping-expected-name">${escapeHtml(item.expectedSourceCol)}</span>`;
+
+              const tdSelect = document.createElement('td');
+              const box = document.createElement('div');
+              box.className = 'mapping-select-box';
+
+              const select = document.createElement('select');
+              select.className = 'mapping-col-select';
+              select.dataset.key = item.key;
+
+              const defaultOpt = document.createElement('option');
+              defaultOpt.value = '';
+              defaultOpt.textContent = '-- 請選擇對應的來源 Excel 欄位 --';
+              select.appendChild(defaultOpt);
+
+              excelHeaderNames.forEach(h => {
+                const opt = document.createElement('option');
+                opt.value = h;
+                opt.textContent = (h === item.suggestion) ? `${h} (推薦比對)` : h;
+                if (h === item.suggestion) {
+                  opt.selected = true;
+                }
+                select.appendChild(opt);
+              });
+
+              if (!item.isFilter) {
+                const skipOpt = document.createElement('option');
+                skipOpt.value = '__SKIP__';
+                skipOpt.textContent = '【留空 / 略過此欄位】';
+                select.appendChild(skipOpt);
+
+                const fixedOpt = document.createElement('option');
+                fixedOpt.value = '__FIXED__';
+                fixedOpt.textContent = '【手動輸入固定值...】';
+                select.appendChild(fixedOpt);
+              }
+
+              box.appendChild(select);
+
+              const fixedInput = document.createElement('input');
+              fixedInput.type = 'text';
+              fixedInput.className = 'mapping-fixed-input hidden';
+              fixedInput.placeholder = `請輸入「${item.targetField}」的固定值內容...`;
+              box.appendChild(fixedInput);
+
+              select.addEventListener('change', () => {
+                if (select.value === '__FIXED__') {
+                  fixedInput.classList.remove('hidden');
+                  fixedInput.focus();
+                } else {
+                  fixedInput.classList.add('hidden');
+                }
+                updateStep2TemplateDetection();
+              });
+
+              tdSelect.appendChild(box);
+              tr.appendChild(tdTarget);
+              tr.appendChild(tdProfiles);
+              tr.appendChild(tdExpected);
+              tr.appendChild(tdSelect);
+              mappingTableBody.appendChild(tr);
+            });
+          }
+        } else {
+          if (missingColumnsContainer) missingColumnsContainer.classList.add('hidden');
+          if (allColumnsMatchedNotice) allColumnsMatchedNotice.classList.remove('hidden');
+        }
+
+        // Attach change listeners to dynamic mappings for real-time re-detection
+        if (wizardTypeColumn) wizardTypeColumn.onchange = updateStep2TemplateDetection;
+        if (wizardCollectionColumn) wizardCollectionColumn.onchange = updateStep2TemplateDetection;
+        if (wizardColorColumn) wizardColorColumn.onchange = updateStep2TemplateDetection;
+        if (wizardSizeColumn) wizardSizeColumn.onchange = updateStep2TemplateDetection;
+
+        // Perform initial detection for Step 2
+        updateStep2TemplateDetection();
+
+        setStepperView(2);
+      }
+
+      function onPrev() {
+        setStepperView(1);
+      }
+
+      function onGoToConfig() {
         cleanup();
-        resolve({ action: 'confirm', mappings, remember });
+        resolve({ action: 'go_to_config' });
       }
 
       function onCancel() {
@@ -1587,9 +2272,72 @@ document.addEventListener('DOMContentLoaded', async () => {
         resolve({ action: 'cancel' });
       }
 
-      btnConfirmMapping.addEventListener('click', onConfirm);
-      btnCancelMapping.addEventListener('click', onCancel);
-      mappingModalClose.addEventListener('click', onCancel);
+      function onConfirm() {
+        const mappings = {};
+        let hasUnselected = false;
+
+        if (currentStep2Data.missingItems && currentStep2Data.missingItems.length > 0 && mappingTableBody) {
+          const rows = mappingTableBody.querySelectorAll('tr');
+          rows.forEach((r, idx) => {
+            const item = currentStep2Data.missingItems[idx];
+            const select = r.querySelector('.mapping-col-select');
+            const fixedInput = r.querySelector('.mapping-fixed-input');
+            const val = select ? select.value : '';
+
+            if (!val) {
+              hasUnselected = true;
+              if (select) select.style.borderColor = '#ef4444';
+            } else {
+              if (select) select.style.borderColor = '';
+            }
+
+            if (val === '__SKIP__') {
+              mappings[item.key] = { type: 'skip', value: '', isFilter: item.isFilter, profiles: item.profiles };
+            } else if (val === '__FIXED__') {
+              mappings[item.key] = { type: 'fixed', value: (fixedInput ? fixedInput.value : '').trim(), isFilter: item.isFilter, profiles: item.profiles };
+            } else {
+              mappings[item.key] = { type: 'column', value: val, isFilter: item.isFilter, profiles: item.profiles };
+            }
+          });
+        }
+
+        if (hasUnselected) {
+          alert('請為所有缺漏欄位選取對應來源、或選擇「留空」/「手動輸入固定值」！');
+          return;
+        }
+
+        const remember = chkRememberMappings ? chkRememberMappings.checked : true;
+
+        const resultData = {
+          action: 'confirm',
+          sheet_name: currentStep2Data.selectedSheetName,
+          header_row: currentStep2Data.selectedHeaderRow,
+          row_start: currentStep2Data.selectedRowStart,
+          filter_column: currentStep2Data.selectedFilterCol,
+          brand_fixed: wizardBrandFixed ? wizardBrandFixed.value.trim() : '',
+          manufacturer_fixed: wizardManufacturerFixed ? wizardManufacturerFixed.value.trim() : '',
+          collection_column: wizardCollectionColumn ? wizardCollectionColumn.value.trim() : 'COLLECTION',
+          type_column: wizardTypeColumn ? wizardTypeColumn.value.trim() : 'TYPE',
+          color_column: wizardColorColumn ? wizardColorColumn.value.trim() : '中文顏色',
+          size_column: wizardSizeColumn ? wizardSizeColumn.value.trim() : 'SIZE',
+          mappings,
+          remember,
+          detectedProfiles: currentStep2Data.detectedProfiles,
+          unmatchedItems: currentStep2Data.unmatchedItems,
+          totalRows: currentStep2Data.totalR,
+          ws: currentStep2Data.ws
+        };
+
+        cleanup();
+        resolve(resultData);
+      }
+
+      if (btnWizardNext) btnWizardNext.addEventListener('click', onNext);
+      if (btnWizardPrev) btnWizardPrev.addEventListener('click', onPrev);
+      if (btnWizardConfirm) btnWizardConfirm.addEventListener('click', onConfirm);
+      if (btnWizardCancel) btnWizardCancel.addEventListener('click', onCancel);
+      if (uploadWizardClose) uploadWizardClose.addEventListener('click', onCancel);
+      if (btnWizardGoToConfig) btnWizardGoToConfig.addEventListener('click', onGoToConfig);
     });
   }
 
@@ -1825,120 +2573,123 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const wb = await XlsxPopulate.fromDataAsync(arrayBuffer);
-      const ws = getSourceSheet(wb);
-      if (!ws || !ws.usedRange()) {
+      if (!wb || !wb.sheets || wb.sheets().length === 0) {
         throw new Error('來源 Excel 中找不到任何可用的工作表！');
       }
 
-      const headerRow = currentSourceConfig?.header_row || 3;
-      const totalR = ws.usedRange().endCell().rowNumber();
+      const wizardRes = await showExcelUploadWizard(file, wb);
 
-      // Step 1: Automatically detect required templates & scan for unmatched items
-      const detectResult = detectRequiredTemplates(ws, headerRow, currentSourceConfig?.row_start || 4, totalR, templateProfiles, currentSourceConfig);
-      const detectedProfiles = Array.isArray(detectResult) ? detectResult : (detectResult.detectedProfiles || templateProfiles);
-      const unmatchedItems = Array.isArray(detectResult) ? [] : (detectResult.unmatchedItems || []);
-
-      // Step 1.5: Prompt user if unmatched items are detected
-      if (unmatchedItems.length > 0) {
-        logMessage(`[警告] 檢測到來源 Excel 中有 ${unmatchedItems.length} 筆商品未命中任何品類模板！`, 'warning');
-        const unmatchedRes = await showUnmatchedTemplateModal(unmatchedItems);
-        if (unmatchedRes.action === 'go_to_config') {
-          sourceExcelFile = null;
-          loadedWorkbook = null;
-          excelDropZone.classList.remove('has-file');
-          excelFileInfo.classList.add('hidden');
-          excelFileInfo.textContent = '';
-          checkReady();
-          updateRangeHintUI();
-          openConfigModal('tabTemplateProfiles');
-          logMessage(`已開啟「對照表設定 ➔ 模板與設定檔」，請新增對應品類模板與關鍵字後，再重新載入 Excel。`, 'info');
-          return;
-        }
+      if (wizardRes.action === 'cancel') {
+        sourceExcelFile = null;
+        loadedWorkbook = null;
+        excelDropZone.classList.remove('has-file');
+        excelFileInfo.classList.add('hidden');
+        excelFileInfo.textContent = '';
+        checkReady();
+        updateRangeHintUI();
+        logMessage('已取消載入來源 Excel 檔案。', 'warning');
+        return;
       }
 
-      // Step 2: Check for missing columns
-      const checkResult = checkMissingColumns(detectedProfiles, ws, headerRow, currentSourceConfig);
+      if (wizardRes.action === 'go_to_config') {
+        sourceExcelFile = null;
+        loadedWorkbook = null;
+        excelDropZone.classList.remove('has-file');
+        excelFileInfo.classList.add('hidden');
+        excelFileInfo.textContent = '';
+        checkReady();
+        updateRangeHintUI();
+        openConfigModal('tabTemplateProfiles');
+        logMessage('已開啟「對照表設定 ➔ 模板與設定檔」，請新增對應品類模板與關鍵字後，再重新載入 Excel。', 'info');
+        return;
+      }
 
-      // Step 3: Prompt user if missing columns are found
-      if (checkResult.missingItems && checkResult.missingItems.length > 0) {
-        const modalRes = await showColumnMappingModal(detectedProfiles, checkResult.missingItems, checkResult.excelHeaderNames);
-        if (modalRes.action === 'cancel') {
-          sourceExcelFile = null;
-          loadedWorkbook = null;
-          excelDropZone.classList.remove('has-file');
-          excelFileInfo.classList.add('hidden');
-          excelFileInfo.textContent = '';
-          checkReady();
-          updateRangeHintUI();
-          logMessage('已取消載入來源 Excel 檔案。', 'warning');
-          return;
-        }
+      // Apply Source Config from Wizard
+      currentSourceConfig.sheet_name = wizardRes.sheet_name;
+      currentSourceConfig.header_row = wizardRes.header_row;
+      currentSourceConfig.row_start = wizardRes.row_start;
+      currentSourceConfig.filter_column = wizardRes.filter_column;
+      currentSourceConfig.brand_fixed = wizardRes.brand_fixed;
+      currentSourceConfig.manufacturer_fixed = wizardRes.manufacturer_fixed;
+      currentSourceConfig.collection_column = wizardRes.collection_column;
+      currentSourceConfig.type_column = wizardRes.type_column;
+      currentSourceConfig.color_column = wizardRes.color_column;
+      currentSourceConfig.size_column = wizardRes.size_column;
 
-        // Apply updated mappings
-        let updatedCount = 0;
-        for (const [key, mapping] of Object.entries(modalRes.mappings)) {
-          let keyUpdated = false;
-          if (mapping.isFilter) {
-            if (mapping.type === 'column') {
-              currentSourceConfig.filter_column = mapping.value;
-              keyUpdated = true;
-            }
-          } else {
-            for (const prof of mapping.profiles) {
-              const targetP = templateProfiles.find(p => p.id === prof.id);
-              if (targetP) {
-                if (!targetP.field_mappings) targetP.field_mappings = { dynamic: {}, fixed: {} };
-                if (!targetP.field_mappings.dynamic) targetP.field_mappings.dynamic = {};
-                if (!targetP.field_mappings.fixed) targetP.field_mappings.fixed = {};
+      // Apply missing column mappings
+      let updatedCount = 0;
+      for (const [key, mapping] of Object.entries(wizardRes.mappings || {})) {
+        let keyUpdated = false;
+        if (mapping.isFilter) {
+          if (mapping.type === 'column') {
+            currentSourceConfig.filter_column = mapping.value;
+            keyUpdated = true;
+          }
+        } else {
+          for (const prof of mapping.profiles) {
+            const targetP = templateProfiles.find(p => p.id === prof.id);
+            if (targetP) {
+              if (!targetP.field_mappings) targetP.field_mappings = { dynamic: {}, fixed: {} };
+              if (!targetP.field_mappings.dynamic) targetP.field_mappings.dynamic = {};
+              if (!targetP.field_mappings.fixed) targetP.field_mappings.fixed = {};
 
-                if (mapping.type === 'column') {
-                  targetP.field_mappings.dynamic[key] = mapping.value;
-                  delete targetP.field_mappings.fixed[key];
-                  keyUpdated = true;
-                } else if (mapping.type === 'fixed') {
-                  targetP.field_mappings.fixed[key] = mapping.value;
-                  delete targetP.field_mappings.dynamic[key];
-                  keyUpdated = true;
-                } else if (mapping.type === 'skip') {
-                  delete targetP.field_mappings.dynamic[key];
-                  keyUpdated = true;
-                }
+              if (mapping.type === 'column') {
+                targetP.field_mappings.dynamic[key] = mapping.value;
+                delete targetP.field_mappings.fixed[key];
+                keyUpdated = true;
+              } else if (mapping.type === 'fixed') {
+                targetP.field_mappings.fixed[key] = mapping.value;
+                delete targetP.field_mappings.dynamic[key];
+                keyUpdated = true;
+              } else if (mapping.type === 'skip') {
+                delete targetP.field_mappings.dynamic[key];
+                keyUpdated = true;
               }
             }
           }
-          if (keyUpdated) {
-            updatedCount++;
-          }
         }
-
-        if (modalRes.remember) {
-          for (const p of templateProfiles) {
-            await window.StorageUtils.saveProfile(p);
-          }
-          const globalConfig = window.AppConfig.get();
-          globalConfig.source = currentSourceConfig;
-          localStorage.setItem('coupang_config', JSON.stringify(globalConfig));
-          if (typeof renderTemplateProfilesUI === 'function') renderTemplateProfilesUI();
-          if (typeof renderSourceConfig === 'function') renderSourceConfig(currentSourceConfig);
+        if (keyUpdated) {
+          updatedCount++;
         }
+      }
 
-        logMessage(`[欄位智慧補全] 已成功補齊/更新 ${updatedCount} 個欄位對應關係！`, 'success');
+      if (wizardRes.remember) {
+        for (const p of templateProfiles) {
+          await window.StorageUtils.saveProfile(p);
+        }
+        const globalConfig = window.AppConfig.get();
+        globalConfig.source = currentSourceConfig;
+        localStorage.setItem('coupang_config', JSON.stringify(globalConfig));
+        if (typeof renderTemplateProfilesUI === 'function') renderTemplateProfilesUI();
+        if (typeof renderSourceConfig === 'function') renderSourceConfig(currentSourceConfig);
       }
 
       sourceExcelFile = file;
       loadedWorkbook = wb;
       excelDropZone.classList.add('has-file');
-      excelFileInfo.textContent = `已載入: ${file.name}`;
+      excelFileInfo.textContent = `已載入: ${file.name}（工作表: ${wizardRes.sheet_name}）`;
       excelFileInfo.classList.remove('hidden');
       checkReady();
 
+      if (inputRowStart) {
+        inputRowStart.value = currentSourceConfig.row_start || 4;
+      }
       if (inputRowEnd) {
-        inputRowEnd.placeholder = `最大 ${totalR} 列`;
+        inputRowEnd.placeholder = `最大 ${wizardRes.totalRows} 列`;
       }
       updateRangeHintUI();
-      const stats = calculateValidProducts(ws);
-      const tmplNames = detectedProfiles.map(p => p.name).join('、');
-      logMessage(`已載入來源 Excel: ${file.name}（工作表「${ws.name()}」共 ${totalR} 列，自動偵測套用模板：【${tmplNames}】，符合條件之有效商品共 ${stats.count} 筆）`, 'success');
+
+      const stats = calculateValidProducts(wizardRes.ws);
+      const tmplNames = (wizardRes.detectedProfiles || []).map(p => p.name).join('、');
+      logMessage(`已成功載入來源 Excel: ${file.name}（工作表「${wizardRes.sheet_name}」共 ${wizardRes.totalRows} 列，自動套用模板：【${tmplNames}】，符合條件之有效商品共 ${stats.count} 筆）`, 'success');
+
+      if (wizardRes.unmatchedItems && wizardRes.unmatchedItems.length > 0) {
+        logMessage(`[提示] 來源 Excel 中有 ${wizardRes.unmatchedItems.length} 筆商品未匹配任何品類模板，已在對照表標註缺少的 Type。`, 'warning');
+      }
+
+      if (updatedCount > 0) {
+        logMessage(`[欄位智慧補全] 已成功補齊/更新 ${updatedCount} 個欄位對應關係！`, 'success');
+      }
     } catch (err) {
       console.warn('解析 Excel 失敗:', err);
       logMessage(`解析 Excel 失敗: ${err.message}`, 'error');
@@ -2332,10 +3083,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
               cell.value(val);
             }
-
-            if ((!mainImgName && !imgs.main) && ['商品名稱', '商品正面(主要圖片）'].includes(colName)) {
-              cell.style('fill', 'ffff0000');
-            }
           }
         };
 
@@ -2443,6 +3190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       setProgress(95, '正在壓縮並修正 Excel 格式...');
       for (const [profId, item] of activeWorkbooks.entries()) {
         if (item.count > 0) {
+          highlightMissingRequiredCells(item.ws, 9, item.nextRowIdx, 6);
           let buf = await item.wb.outputAsync();
           buf = await patchXlsxDimension(buf);
           if (!filesToExport[item.targetSubfolder]) {
@@ -2646,15 +3394,42 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnDownloadSample.addEventListener('click', async () => {
     const zip = new JSZip();
     const photoFolder = zip.folder("Photo");
-    const hermitage = photoFolder.folder("HERMITAGE");
-    const dogCollar = hermitage.folder("DOG COLLAR");
-    const blackCollar = dogCollar.folder("BLACK");
-    blackCollar.file("HERMITAGE_DOG_COLLAR_BLACK_主圖.jpg", "（請放入 1000x1000 商品正面主圖）");
-    blackCollar.file("1.jpg", "（請放入情境圖 1）");
-    blackCollar.file("2.jpg", "（請放入情境圖 2）");
-    dogCollar.file("尺寸規格表_HERMITAGE_DOG_COLLAR.jpg", "（請放入尺寸規格圖）");
-    const labels = photoFolder.folder("背標");
-    labels.file("背標_品牌名 隱士系列 頂級皮革狗項圈 經典黑 L_L.jpg", "（請放入商品背標照片）");
+    
+    // 範例 1: 冷門/特殊品類 - 玩具與球類 (單一尺寸 / 特殊規格)
+    const gelBall = photoFolder.folder("GEL BALL WITH ROPE 綠");
+    gelBall.file("主圖.jpg", "（請放入 1000x1000 正方形商品正面主圖）");
+    gelBall.file("情境圖1.jpg", "（請放入情境圖 1）");
+    gelBall.file("情境圖2.jpg", "（請放入情境圖 2）");
+    gelBall.file("size chart_GEL BALL WITH ROPE.png", "（請放入尺寸規格圖）");
+    gelBall.file("芬蘭Rukka_附繩款彈力訓練球_綠_one_size_綠_ONE.png", "（請放入單一尺寸背標照片）");
+
+    const ringToy = photoFolder.folder("RING TOY 暖陽黃");
+    ringToy.file("主圖.jpg", "（請放入拉扯圓圈玩具主圖）");
+    ringToy.file("情境圖1.jpg", "（請放入情境圖 1）");
+    ringToy.file("size chart_RING TOY.png", "（請放入尺寸規格圖）");
+    ringToy.file("芬蘭_Rukka_彈力拉扯圓圈玩具_暖陽黃_one_size_暖陽黃_ONE.png", "（請放入背標照片）");
+
+    const calmDuck = photoFolder.folder("CALM DUCK TOY 白");
+    calmDuck.file("主圖.jpg", "（請放入鴨子安撫玩偶主圖）");
+    calmDuck.file("情境圖1.jpg", "（請放入情境圖 1）");
+    calmDuck.file("size chart_CALM DUCK TOY.png", "（請放入尺寸規格圖）");
+    calmDuck.file("芬蘭_Rukka_鴨子安撫玩偶_白_one_size_白_ONE.png", "（請放入背標照片）");
+
+    // 範例 2: 服飾與雨衣 (多尺寸、紅黑顏色對比)
+    const raincoatBlack = photoFolder.folder("HAYTON X RAINCOAT 黑");
+    raincoatBlack.file("主圖.jpg", "（請放入黑色雨衣主圖）");
+    raincoatBlack.file("情境圖1.jpg", "（請放入情境圖 1）");
+    raincoatBlack.file("size chart_haytonXraincoat.png", "（請放入尺寸規格圖）");
+    raincoatBlack.file("芬蘭_Rukka_HAYTON_X_輕量雨衣_黑_25_黑_25_0.png", "（請放入 25 號背標照片）");
+    raincoatBlack.file("芬蘭_Rukka_HAYTON_X_輕量雨衣_黑_30_黑_30.png", "（請放入 30 號背標照片）");
+
+    // 範例 3: 生活與訓練配件 (吸水浴袍 XXS~XXL 多尺寸)
+    const bathrobeGreen = photoFolder.folder("AALTO PET BATHROBE 蘋果綠");
+    bathrobeGreen.file("主圖.jpg", "（請放入蘋果綠浴袍主圖）");
+    bathrobeGreen.file("情境圖1.jpg", "（請放入情境圖 1）");
+    bathrobeGreen.file("size chart_AALTO PET BATHROBE.png", "（請放入尺寸規格圖）");
+    bathrobeGreen.file("芬蘭_Rukka_吸水_浴袍_蘋果綠_M_蘋果綠_M.png", "（請放入 M 號背標照片）");
+    bathrobeGreen.file("芬蘭_Rukka_吸水_浴袍_蘋果綠_L_蘋果綠_L.png", "（請放入 L 號背標照片）");
 
     const content = await zip.generateAsync({ type: "blob" });
     saveAs(content, "Coupang_Photo_Sample_Structure.zip");

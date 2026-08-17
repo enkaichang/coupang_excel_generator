@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>酷澎報價單與圖片批量生成系統 v2.8.0</title>
+  <title>酷澎報價單與圖片批量生成系統 v2.12.5</title>
   <!-- Google Fonts: Noto Sans TC & Material Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,7 +32,7 @@
         <div>
           <div style="display: flex; align-items: center; gap: 10px;">
             <h1>酷澎報價單與圖片生成系統</h1>
-            <span class="version-badge">v2.8.0</span>
+            <span class="version-badge">v2.12.5</span>
           </div>
           <p class="subtitle">讀取來源 Excel 與商品圖庫，自動產生多模板標準報價單及處理後圖片</p>
         </div>
@@ -170,6 +170,14 @@
                 </div>
                 <input type="file" id="uploadTemplateFileInput" accept=".xlsx" hidden>
                 <div id="profileListContainer" class="profile-list"></div>
+                <!-- 提示缺少 Type 對應模板 (紅框橢圓形標籤) -->
+                <div id="unmatchedTypeHintContainer" class="unmatched-type-pills-container hidden">
+                  <div class="unmatched-type-pills-header">
+                    <span class="material-icons" style="font-size: 0.95rem; color: #dc2626;">warning</span>
+                    <span>來源 Excel 缺少對應模板之 Type:</span>
+                  </div>
+                  <div id="unmatchedTypePillsList" class="unmatched-type-pills-list"></div>
+                </div>
               </div>
               <div class="profile-editor-pane">
                 <div id="profileEditorContent"></div>
@@ -218,12 +226,18 @@
               <input type="text" id="wizardSubfolder" placeholder="例如: 寵物服飾">
             </div>
             <div class="wizard-field">
-              <label>匹配關鍵字 (逗號分隔): <span class="req-star">*</span></label>
-              <input type="text" id="wizardKeywords" placeholder="例如: CLOTHES, 衣服, 服飾, 寵物衣">
-            </div>
-            <div class="wizard-field">
               <label>預設酷澎分類代碼與名稱: <span class="req-star">*</span></label>
               <input type="text" id="wizardCategoryName" placeholder="例如: 寵物用品>狗用品>狗服飾 (66050)">
+            </div>
+            <div class="wizard-field" style="grid-column: 1 / -1;">
+              <label>匹配關鍵字: <span class="req-star">*</span></label>
+              <div class="keyword-tags-wrapper">
+                <div class="keyword-input-group">
+                  <input type="text" id="wizardKeywordInput" placeholder="輸入關鍵字後點擊 + 或按 Enter 新增 (支援逗號分隔)...">
+                  <button type="button" id="btnAddWizardKeyword" class="btn btn-secondary btn-sm btn-icon" title="新增關鍵字"><span class="material-icons">add</span></button>
+                </div>
+                <div id="wizardKeywordsTagsContainer" class="keyword-tags-container"></div>
+              </div>
             </div>
           </div>
           <div class="wizard-table-header">
@@ -250,101 +264,170 @@
       </div>
     </div>
 
-    <!-- Modal: 未匹配品類模板品項提示 -->
-    <div id="unmatchedTemplateModal" class="modal-overlay hidden">
-      <div class="modal-card unmatched-modal">
+    <!-- Modal: 來源 Excel 載入與智慧對應精靈 (Excel Upload Wizard Modal) -->
+    <div id="excelUploadWizardModal" class="modal-overlay hidden">
+      <div class="modal-card mapping-modal upload-wizard-modal">
         <div class="modal-header">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <span class="material-icons" style="color: #f59e0b; font-size: 1.6rem;">warning</span>
-            <h3 class="modal-title">發現未設定模板之商品品項</h3>
+            <span class="material-icons" style="color: #6366f1; font-size: 1.5rem;">auto_fix_high</span>
+            <h3 class="modal-title" id="uploadWizardTitle">來源 Excel 載入與設定精靈</h3>
           </div>
-          <button id="unmatchedModalClose" class="modal-close" title="關閉"><span class="material-icons">close</span></button>
+          <button id="uploadWizardClose" class="modal-close" title="關閉"><span class="material-icons">close</span></button>
         </div>
+
+        <!-- Stepper Header -->
+        <div class="wizard-stepper-header">
+          <div class="stepper-step active" id="wizardStepIndicator1">
+            <span class="step-number">1</span>
+            <span class="step-label">來源工作表與行列設定</span>
+          </div>
+          <div class="stepper-line" id="wizardStepperLine"></div>
+          <div class="stepper-step" id="wizardStepIndicator2">
+            <span class="step-number">2</span>
+            <span class="step-label">欄位智慧檢查與補全</span>
+          </div>
+        </div>
+
         <div class="modal-content">
-          <div class="unmatched-alert-box">
-            <p>系統掃描來源 Excel 時，檢測到共發現 <strong id="unmatchedTypeCount" class="unmatched-count-highlight">0</strong> 種未設定模板之 Type（合計 <strong id="unmatchedTotalCount" class="unmatched-count-highlight">0</strong> 筆商品）。若直接產生報價單，這些品項將歸入「未分類品項」並標記紅底警示。</p>
-            <p style="margin-top: 6px; font-size: 0.85rem; color: #64748b;">建議您點擊「前往設定模板」在「對照表設定 ➔ 模板與設定檔」中新增該品類的模板與關鍵字。</p>
+          <!-- Step 1: 來源工作表與行列設定 (Source Sheet & Rows) -->
+          <div id="uploadWizardStep1" class="wizard-step-view">
+            <div class="mapping-step-info">
+              <p>已成功讀取檔案 <strong id="uploadWizardFileName">商品資料.xlsx</strong>。請確認要處理的來源工作表、表頭標題列及資料起始列：</p>
+            </div>
+
+            <div class="gui-form">
+              <div class="form-group">
+                <div class="input-row">
+                  <label for="wizardSheetSelect">來源工作表名稱:</label>
+                  <select id="wizardSheetSelect" class="form-select"></select>
+                </div>
+                <div class="input-row">
+                  <label for="wizardHeaderRow">標題列位於第幾列:</label>
+                  <input type="number" id="wizardHeaderRow" min="1" value="3">
+                </div>
+                <div class="input-row">
+                  <label for="wizardRowStart">資料起始列:</label>
+                  <input type="number" id="wizardRowStart" min="1" value="4">
+                </div>
+                <div class="input-row">
+                  <label for="wizardFilterColumn">篩選欄位 (有填寫才處理):</label>
+                  <select id="wizardFilterColumn" class="form-select"></select>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="unmatched-table-header">
-            <h4>未命中 Type 彙總清單 (<span id="unmatchedListCount">0</span> 種 Type，共 <span id="unmatchedItemsListCount">0</span> 筆商品)</h4>
-          </div>
+          <!-- Step 2: 來源 Excel 欄位智慧檢查與補全 (Field Intelligence & Mapping) -->
+          <div id="uploadWizardStep2" class="wizard-step-view hidden">
+            <div class="mapping-step-info">
+              <p>系統已自動分析您上傳的 Excel 檔案，偵測到適用之報價單模板。請確認全域屬性對應及補齊缺漏之欄位：</p>
+            </div>
 
-          <div class="unmatched-table-container">
-            <table class="unmatched-table">
-              <thead>
-                <tr>
-                  <th style="width: 42%;">來源 Type 類別</th>
-                  <th style="width: 25%; text-align: center;">出現次數 (筆數)</th>
-                  <th style="width: 33%; text-align: right;">包含商品明細</th>
-                </tr>
-              </thead>
-              <tbody id="unmatchedTableBody"></tbody>
-            </table>
+            <!-- Detected Templates Bar -->
+            <div class="detected-templates-bar">
+              <span class="detected-title">本檔案偵測到的適用模板：</span>
+              <div id="detectedTemplatesContainer" class="detected-templates-list"></div>
+            </div>
+
+            <!-- Unmatched Type Warning Alert Box (Integrated into Step 2) -->
+            <div id="wizardUnmatchedAlertBox" class="wizard-unmatched-box hidden">
+              <div class="wizard-unmatched-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="material-icons" style="color: #f59e0b; font-size: 1.3rem;">warning</span>
+                  <span class="wizard-unmatched-title">發現 <strong id="wizardUnmatchedTypeCount" class="unmatched-count-highlight">0</strong> 種未設定模板之 Type（合計 <strong id="wizardUnmatchedTotalCount" class="unmatched-count-highlight">0</strong> 筆商品）</span>
+                </div>
+                <button type="button" id="btnWizardGoToConfig" class="btn btn-outline btn-sm" title="前往對照表新增品類模板">
+                  <span class="material-icons" style="font-size: 0.95rem;">add</span> 前往新增模板
+                </button>
+              </div>
+              <div class="wizard-unmatched-content">
+                <p style="margin: 0 0 8px 0; font-size: 0.84rem; color: #92400e;">若未新增模板直接處理，這些品項將歸入「未分類品項」。點擊下方可展開檢視明細：</p>
+                <div id="wizardUnmatchedAccordionList" class="wizard-unmatched-accordion-list"></div>
+              </div>
+            </div>
+
+            <!-- Global Attributes & Dynamic Mappings Section -->
+            <div class="mapping-section-box">
+              <div class="mapping-section-header">
+                <span class="material-icons" style="color: #6366f1; font-size: 1.15rem;">tune</span>
+                <h4>全域屬性與動態對應設定 (Global Attributes & Dynamic Mappings)</h4>
+              </div>
+              <p class="mapping-section-desc">設定整份來源 Excel 通用的固定品牌、固定製造商，以及系列、品類、顏色、尺寸的來源表對應欄位名稱。</p>
+              
+              <div class="gui-form global-attributes-grid">
+                <div class="input-row">
+                  <label for="wizardBrandFixed">全域固定品牌 (選填):</label>
+                  <input type="text" id="wizardBrandFixed" placeholder="例如: RUKKA，未填寫則留空">
+                </div>
+                <div class="input-row">
+                  <label for="wizardManufacturerFixed">全域固定製造商 (選填):</label>
+                  <input type="text" id="wizardManufacturerFixed" placeholder="未填寫且無設定時預設自動採用品牌">
+                </div>
+                <div class="input-row">
+                  <label for="wizardCollectionColumn">系列來源欄位 (Collection):</label>
+                  <select id="wizardCollectionColumn" class="form-select"></select>
+                </div>
+                <div class="input-row">
+                  <label for="wizardTypeColumn">品類來源欄位 (Type):</label>
+                  <select id="wizardTypeColumn" class="form-select"></select>
+                </div>
+                <div class="input-row">
+                  <label for="wizardColorColumn">顏色來源欄位 (Color):</label>
+                  <select id="wizardColorColumn" class="form-select"></select>
+                </div>
+                <div class="input-row">
+                  <label for="wizardSizeColumn">尺寸來源欄位 (Size):</label>
+                  <select id="wizardSizeColumn" class="form-select"></select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Missing Column Mappings List Section -->
+            <div class="mapping-section-box" style="margin-top: 18px;">
+              <div class="mapping-table-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="material-icons" style="color: #6366f1; font-size: 1.15rem;">checklist</span>
+                  <h4>待補全之欄位對應清單 (<span id="missingColumnCount">0</span> 個未匹配欄位)</h4>
+                </div>
+              </div>
+
+              <div id="missingColumnsContainer" class="mapping-table-container">
+                <table class="mapping-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 24%;">目標報價單欄位</th>
+                      <th style="width: 20%;">適用模板</th>
+                      <th style="width: 20%;">原設定來源名稱</th>
+                      <th style="width: 36%;">指定來源 Excel 欄位 / 設定值</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mappingTableBody"></tbody>
+                </table>
+              </div>
+              <div id="allColumnsMatchedNotice" class="all-matched-box hidden">
+                <span class="material-icons" style="color: #10b981; font-size: 1.3rem;">check_circle</span>
+                <span>所有目標報價單必填欄位均已成功在來源 Excel 表頭中找到精準對應！</span>
+              </div>
+            </div>
+
+            <div class="mapping-options-bar" style="margin-top: 14px;">
+              <label class="checkbox-label">
+                <input type="checkbox" id="chkRememberMappings" checked>
+                <span>記住此對應關係供日後使用（自動同步儲存至來源表設定與模板設定檔）</span>
+              </label>
+            </div>
           </div>
         </div>
+
         <div class="modal-actions modal-actions-split">
           <div class="actions-left">
-            <button id="btnIgnoreUnmatched" class="btn btn-outline" title="暫時略過並繼續載入">
-              <span class="material-icons">arrow_forward</span> 略過並繼續
-            </button>
+            <button id="btnWizardPrev" class="btn btn-outline btn-icon hidden" title="返回上一步"><span class="material-icons">arrow_back</span></button>
           </div>
           <div class="actions-right">
-            <button id="btnGoToConfigTemplates" class="btn btn-primary" title="前往對照表新增品類模板">
-              <span class="material-icons">settings</span> 前往設定模板
-            </button>
+            <button id="btnWizardCancel" class="btn btn-outline btn-icon" title="取消上傳"><span class="material-icons">close</span></button>
+            <button id="btnWizardNext" class="btn btn-primary btn-icon" title="下一步：欄位智慧檢查與補全"><span class="material-icons">arrow_forward</span></button>
+            <button id="btnWizardConfirm" class="btn btn-primary btn-icon hidden" title="確認並完成載入"><span class="material-icons">check</span></button>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal: 來源 Excel 缺漏欄位智慧補全 (Column Mapping Modal) -->
-    <div id="columnMappingModal" class="modal-overlay hidden">
-      <div class="modal-card mapping-modal">
-        <div class="modal-header">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <h3 class="modal-title">來源 Excel 欄位智慧檢查與補全</h3>
-          </div>
-          <button id="mappingModalClose" class="modal-close" title="關閉"><span class="material-icons">close</span></button>
-        </div>
-        <div class="modal-content">
-          <div class="mapping-step-info">
-            <p>系統已自動分析您上傳的 Excel 檔案，偵測到需要套用的模板，並發現部分目標欄位在目前來源 Excel 表頭中找不到對應名稱。請在下方確認或選取正確的來源欄位：</p>
-          </div>
-          
-          <div class="detected-templates-bar">
-            <span class="detected-title">本檔案偵測到的適用模板：</span>
-            <div id="detectedTemplatesContainer" class="detected-templates-list"></div>
-          </div>
-
-          <div class="mapping-table-header">
-            <h4>待補全之欄位對應清單 (<span id="missingColumnCount">0</span> 個未匹配欄位)</h4>
-          </div>
-
-          <div class="mapping-table-container">
-            <table class="mapping-table">
-              <thead>
-                <tr>
-                  <th style="width: 24%;">目標報價單欄位</th>
-                  <th style="width: 20%;">適用模板</th>
-                  <th style="width: 20%;">原設定來源名稱</th>
-                  <th style="width: 36%;">指定來源 Excel 欄位 / 設定值</th>
-                </tr>
-              </thead>
-              <tbody id="mappingTableBody"></tbody>
-            </table>
-          </div>
-
-          <div class="mapping-options-bar">
-            <label class="checkbox-label">
-              <input type="checkbox" id="chkRememberMappings" checked>
-              <span>記住此對應關係供日後使用（自動同步儲存至模板設定檔）</span>
-            </label>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button id="btnCancelMapping" class="btn btn-outline btn-icon" title="取消上傳"><span class="material-icons">close</span></button>
-          <button id="btnConfirmMapping" class="btn btn-primary btn-icon" title="確認對應並繼續載入"><span class="material-icons">check</span></button>
         </div>
       </div>
     </div>

@@ -29,10 +29,25 @@ class CoupangProcessor {
     return CoupangProcessor.getAllCategoryKeywords(this.templateProfiles);
   }
 
+  static getDefaultProfiles() {
+    if (typeof window !== 'undefined' && window.AppConfig && typeof window.AppConfig.getDefaultProfiles === 'function') {
+      return window.AppConfig.getDefaultProfiles();
+    }
+    if (typeof require !== 'undefined') {
+      try {
+        const defaultCfg = require('./default_config.js');
+        if (defaultCfg && typeof defaultCfg.getDefaultProfiles === 'function') {
+          return defaultCfg.getDefaultProfiles();
+        }
+      } catch (e) {}
+    }
+    return [];
+  }
+
   static getAllCategoryKeywords(templateProfiles = []) {
     const profiles = (templateProfiles && templateProfiles.length > 0)
       ? templateProfiles
-      : (window.AppConfig ? window.AppConfig.getDefaultProfiles() : []);
+      : CoupangProcessor.getDefaultProfiles();
 
     const baseKeywords = [
       'HARNESS', 'COLLAR', 'LEASH', '項圈', '胸背帶', '牽繩', '背帶', '拉繩',
@@ -51,30 +66,107 @@ class CoupangProcessor {
     return unique.sort((a, b) => b.length - a.length);
   }
 
+  static getUtils() {
+    if (typeof window !== 'undefined' && window.SharedUtils) return window.SharedUtils;
+    if (typeof require !== 'undefined') {
+      try { return require('./shared_utils.js'); } catch (e) {}
+    }
+    return null;
+  }
+
   normStr(s) {
     if (!s) return '';
-    if (window.SharedUtils) return window.SharedUtils.cleanStrForMatching(s);
+    const utils = CoupangProcessor.getUtils();
+    if (utils) return utils.cleanStrForMatching(s);
     return String(s).normalize('NFKC').toUpperCase().replace(/[\u3000\u00A0\s\r\n\(\)（）\-_*\/\\#\[\]]/g, '').trim();
   }
 
   isKeywordMatch(text, kw) {
     if (!text || !kw) return false;
-    const textUpper = (window.SharedUtils ? window.SharedUtils.normalizeKey(text) : String(text).normalize('NFKC').trim()).toUpperCase();
-    const kwUpper = (window.SharedUtils ? window.SharedUtils.normalizeKey(kw) : String(kw).normalize('NFKC').trim()).toUpperCase();
-
-    // 標準化破折號、底線、斜線為標準空白，確保 X-HARNESS 與 X HARNESS 能夠精準命中單詞邊界
-    const textClean = textUpper.replace(/[\s\-_/]+/g, ' ');
-    const kwClean = kwUpper.replace(/[\s\-_/]+/g, ' ');
-
-    // 英文字詞 (ASCII): 使用字詞邊界檢查，防止如 CAT 誤判 CATEGORY、JACKET 誤判 JACKETS
-    const isAscii = /^[\x00-\x7F]+$/.test(kwClean);
-    if (isAscii) {
-      const escaped = kwClean.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&').replace(/\s+/g, '\\s+');
-      const re = new RegExp(`(^|[^A-Z0-9])${escaped}($|[^A-Z0-9])`, 'i');
-      return re.test(textClean);
+    const utils = (typeof window !== 'undefined' && window.SharedUtils) ? window.SharedUtils : (typeof require !== 'undefined' ? require('./shared_utils.js') : null);
+    if (utils) {
+      return utils.matchToken(text, kw, { boundaryMatch: true, strictNoPrefix: true });
     }
-    // 中文/複合字詞: 標準包含檢查
-    return textUpper.includes(kwUpper) || textClean.includes(kwClean);
+    const textUpper = String(text).normalize('NFKC').trim().toUpperCase();
+    const kwUpper = String(kw).normalize('NFKC').trim().toUpperCase();
+    return textUpper.includes(kwUpper);
+  }
+
+  calculateMainImageScore(fileName, skuStr, colorZh, colorEn, collZh, collEn, zhKeywords = [], isFlatDir = false) {
+    if (!fileName) return 0;
+    const fn = fileName;
+    const fnL = fn.toLowerCase();
+    let score = 0;
+
+    const isExplicitMain = fn.includes('主圖') || fnL.startsWith('main') || fn.includes('主圖1') || fnL.includes('main_photo') || fnL.includes('mainphoto');
+    if (isExplicitMain) {
+      score += 100;
+    } else {
+      if (!fn.includes('情境') && !fn.includes('尺寸') && !fn.includes('背標') && !fnL.includes('chart') && !fnL.includes('scene') && !fnL.includes('label') && fn !== '.DS_Store' && !fnL.endsWith('.db')) {
+        score += 30;
+      } else {
+        return 0;
+      }
+    }
+
+    const utils = (typeof window !== 'undefined' && window.SharedUtils) ? window.SharedUtils : (typeof require !== 'undefined' ? require('./shared_utils.js') : null);
+
+    // 顏色精確加分 (前綴防護: 防止粉紅色主圖被加給紅色)
+    if (colorZh) {
+      if (utils ? utils.matchToken(fn, colorZh, { boundaryMatch: true, strictNoPrefix: true }) : fn.includes(colorZh)) {
+        score += 50;
+      } else if (fn.includes(colorZh)) {
+        score += 10;
+      }
+    }
+    if (colorEn && (utils ? utils.matchToken(fn, colorEn, { boundaryMatch: true }) : fn.toUpperCase().includes(colorEn.toUpperCase()))) {
+      score += 40;
+    }
+
+    // SKU / EAN 條碼精確命中
+    if (skuStr && fn.includes(skuStr)) {
+      score += 80;
+    }
+
+    // 系列命中加分
+    if (collZh && (utils ? utils.matchToken(fn, collZh, { boundaryMatch: true }) : fn.includes(collZh))) {
+      score += 20;
+    }
+
+    // 中文品名關鍵詞命中加分
+    for (const kw of zhKeywords) {
+      if (kw.length >= 2 && fn.includes(kw)) {
+        score += 15;
+      }
+    }
+
+    return score;
+  }
+
+  calculateSceneImageScore(fileName, sceneIndex = 1, skuStr, colorZh, colorEn, collZh, zhKeywords = []) {
+    if (!fileName) return 0;
+    const fn = fileName;
+    const fnL = fn.toLowerCase();
+    let score = 0;
+
+    const targetNum = String(sceneIndex);
+    const isExplicitScene = fn.includes(`情境圖 ${targetNum}`) || fn.includes(`情境圖${targetNum}`) || fn.includes(`情境${targetNum}`) || fnL.includes(`scene${targetNum}`) || fnL.includes(`scene_${targetNum}`) || (sceneIndex === 1 && (fn === '情境圖.jpg' || fn === '情境圖.png' || fn === '1.jpg' || fn === '1.png')) || (sceneIndex === 2 && (fn === '2.jpg' || fn === '2.png'));
+
+    if (isExplicitScene) {
+      score += 100;
+    } else {
+      return 0;
+    }
+
+    const utils = (typeof window !== 'undefined' && window.SharedUtils) ? window.SharedUtils : (typeof require !== 'undefined' ? require('./shared_utils.js') : null);
+
+    if (colorZh && (utils ? utils.matchToken(fn, colorZh, { boundaryMatch: true, strictNoPrefix: true }) : fn.includes(colorZh))) {
+      score += 30;
+    }
+    if (skuStr && fn.includes(skuStr)) {
+      score += 50;
+    }
+    return score;
   }
 
   getTargetTemplateAndCategory(prodName = '', typeStr = '') {
@@ -84,7 +176,7 @@ class CoupangProcessor {
 
     const profiles = (this.templateProfiles && this.templateProfiles.length > 0)
       ? this.templateProfiles
-      : (window.AppConfig ? window.AppConfig.getDefaultProfiles() : []);
+      : CoupangProcessor.getDefaultProfiles();
 
     let bestProfile = null;
     let highestScore = 0;
@@ -160,12 +252,12 @@ class CoupangProcessor {
 
   extractChineseKeywords(prodName, brand = '', color = '', size = '') {
     if (!prodName) return [];
-    let s = (window.SharedUtils ? window.SharedUtils.normalizeKey(prodName) : String(prodName).replace(/[\r\n\t]+/g, ' ').normalize('NFKC').trim());
+    const utils = CoupangProcessor.getUtils();
+    let s = (utils ? utils.normalizeKey(prodName) : String(prodName).replace(/[\r\n\t]+/g, ' ').normalize('NFKC').trim());
     if (brand) {
       const escapedBrand = brand.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
       s = s.replace(new RegExp(escapedBrand, 'gi'), ' ');
     }
-    s = s.replace(/芬蘭|Rukka/gi, ' ');
     s = s.replace(/[\（\(\）\)]/g, ' ');
     if (color) {
       const escapedColor = String(color).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -181,13 +273,12 @@ class CoupangProcessor {
     const rawTokens = s.split(/[\s_+\/\-]+/).map(t => t.trim()).filter(t => t.length >= 2);
     const keywords = new Set(rawTokens);
 
-    // 拆解複合詞與常見商品特徵詞
+    // 通用子詞分解：長度 >= 4 的詞段自動萃取 2~3 字子詞，完全消除廠商專屬硬編碼
     for (const token of rawTokens) {
-      if (token.length >= 3) {
-        const subTerms = ['訓練員', '圍裙', '背心', '口袋巾', '毛巾', '浴袍', '小鳥', '小鴨', '海獺', '附握柄', '握柄', '附繩款', '附繩', '彈力球', '訓練球', '安撫背心', '安撫玩偶', '游泳背心', '有機棉', '超細纖維', '隨身小包', '保暖外套', '保暖衣', '連身衣', '防護靴', '防護鞋', '腿套'];
-        for (const st of subTerms) {
-          if (token.includes(st)) {
-            keywords.add(st);
+      if (token.length >= 4) {
+        for (let len = 2; len <= 3; len++) {
+          for (let i = 0; i <= token.length - len; i++) {
+            keywords.add(token.substr(i, len));
           }
         }
       }
@@ -195,32 +286,38 @@ class CoupangProcessor {
     return Array.from(keywords);
   }
 
-  calculateBackLabelScore(fileName, normTargetSize, zhKeywords = [], colorZh = '', collZh = '', collEn = '') {
+  calculateBackLabelScore(fileName, normTargetSize, zhKeywords = [], colorZh = '', collZh = '', collEn = '', prodZhName = '') {
     if (!fileName) return 0;
+    const utils = (typeof window !== 'undefined' && window.SharedUtils) ? window.SharedUtils : (typeof require !== 'undefined' ? require('./shared_utils.js') : null);
     const fn = fileName;
     const dotIdx = fn.lastIndexOf('.');
     const nameRaw = dotIdx !== -1 ? fn.substring(0, dotIdx) : fn;
     const nameNoExt = nameRaw.normalize('NFKC').toUpperCase();
     const nameNormalized = nameRaw.replace(/_/g, ' ');
+    const nameNoUnderscore = nameRaw.replace(/_/g, '');
     let sizeScore = 0;
 
     if (normTargetSize === 'UNISIZE' || normTargetSize === '單一尺寸' || normTargetSize === 'ONE' || normTargetSize === 'ONE SIZE') {
-      if (nameNoExt.includes('單一尺寸') || nameNoExt.includes('UNISIZE') || nameNoExt.includes('_ONE') || nameNoExt.includes(' ONE')) {
+      if (nameNoExt.includes('單一尺寸') || nameNoExt.includes('UNISIZE') || nameNoExt.includes('_ONE') || nameNoExt.includes(' ONE') || nameNoExt === '背標_ONE' || nameNoExt === '背標_單一尺寸') {
         sizeScore = 100;
       } else if (nameNoExt.includes('背標') || nameNoExt.includes('LABEL')) {
         sizeScore = 80;
       }
     } else if (normTargetSize) {
-      const cleanTargetDim = normTargetSize.replace(/CM|MM/g, '').replace(/[\s\/\-_*xX\.]+/g, '_');
-      const cleanNameDim = nameNoExt.replace(/CM|MM/g, '').replace(/[\s\/\-_*xX\.]+/g, '_');
-      if (cleanTargetDim.length >= 3 && cleanNameDim.includes(cleanTargetDim)) {
-        sizeScore = 90;
-      }
-
       const escaped = normTargetSize.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      const regexExact = new RegExp(`(?:^|[\\s_\\-\\(\\[])${escaped}(?:$|[\\s_\\-\\)\\]]|_?背標|\\.[a-zA-Z0-9]+$)`, 'i');
-      if (regexExact.test(nameNoExt)) {
+      // 1. 支援標準專屬命名直接命中: 背標_{尺寸} / 背標-{尺寸}
+      const regexDirectBackLabel = new RegExp(`^背標[_\-\\s]?${escaped}$`, 'i');
+
+      if (regexDirectBackLabel.test(nameNoExt)) {
+        sizeScore = 110;
+      } else if (utils ? utils.matchToken(nameNoExt, normTargetSize, { boundaryMatch: true }) : new RegExp(`(?:^|[\\s_\\-\\(\\[])${escaped}(?:$|[\\s_\\-\\)\\]]|_?背標|\\.[a-zA-Z0-9]+$)`, 'i').test(nameNoExt)) {
         sizeScore = 100;
+      } else {
+        const cleanTargetDim = normTargetSize.replace(/CM|MM/g, '').replace(/[\s\/\-_*xX\.]+/g, '_');
+        const cleanNameDim = nameNoExt.replace(/CM|MM/g, '').replace(/[\s\/\-_*xX\.]+/g, '_');
+        if (cleanTargetDim.length >= 3 && cleanNameDim.includes(cleanTargetDim)) {
+          sizeScore = 90;
+        }
       }
     } else {
       // 單一尺寸或無尺寸欄位商品（normTargetSize 為空）：尋找專屬背標且未標註其他尺寸代碼 (1個明確 Fallback)
@@ -236,23 +333,31 @@ class CoupangProcessor {
 
     let totalScore = sizeScore;
 
-    // 中文品名核心詞交集加分 (每個吻合關鍵詞 +25 分，支援底線轉換與直接匹配)
+    // 圖片移除 '_' 後比對是否包含中文品名 (支援包含完整中文品名與尺寸之圖檔)
+    if (prodZhName) {
+      const cleanProdName = prodZhName.replace(/[\s_+\/\-]+/g, '');
+      if (cleanProdName.length >= 3 && nameNoUnderscore.includes(cleanProdName)) {
+        totalScore += 50;
+      }
+    }
+
+    // 中文品名核心詞交集加分 (每個吻合關鍵詞 +25 分，支援底線轉換、去底線與直接匹配)
     for (const kw of zhKeywords) {
-      if (kw.length >= 2 && (nameRaw.includes(kw) || nameNormalized.includes(kw))) {
+      if (kw.length >= 2 && (nameRaw.includes(kw) || nameNormalized.includes(kw) || nameNoUnderscore.includes(kw))) {
         totalScore += 25;
       }
     }
 
-    // 中文顏色命中加分 (+30 分)
-    if (colorZh && (nameRaw.includes(colorZh) || nameNormalized.includes(colorZh))) {
+    // 中文顏色命中加分 (+30 分，前綴安全防護)
+    if (colorZh && (utils ? (utils.matchToken(nameRaw, colorZh, { strictNoPrefix: true }) || utils.matchToken(nameNoUnderscore, colorZh, { strictNoPrefix: true })) : nameRaw.includes(colorZh))) {
       totalScore += 30;
     }
 
-    // 系列命中加分 (+20 分)
-    if (collZh && nameRaw.includes(collZh)) {
+    // 系列命中加分 (+20 分 / +15 分)
+    if (collZh && (utils ? utils.matchToken(nameRaw, collZh) : nameRaw.includes(collZh))) {
       totalScore += 20;
     }
-    if (collEn && nameNoExt.includes(collEn.toUpperCase())) {
+    if (collEn && (utils ? utils.matchToken(nameNoExt, collEn) : nameNoExt.includes(collEn.toUpperCase()))) {
       totalScore += 15;
     }
 
@@ -279,11 +384,12 @@ class CoupangProcessor {
   }
 
   getLocalImagesForProduct(parsedData, rawHints = {}) {
-    // 1. 直通 Excel 的 COLLECTION：若來源 Excel 有提供 collection，100% 以 Excel 欄位為唯一系列準則
+    const utils = CoupangProcessor.getUtils();
     const collEn = (rawHints.collection || '').trim();
     const collZh = collEn ? '' : (parsedData.collection || '').replace(/系列$/g, '').trim();
+    const brandName = (rawHints.brand || parsedData.brand || '').trim();
     const collectionCandidates = (collEn ? [collEn] : (collZh ? [collZh] : []))
-      .filter(c => !c.toUpperCase().includes('RUKKA') && !c.toUpperCase().includes('芬蘭'));
+      .filter(c => !brandName || !c.toUpperCase().includes(brandName.toUpperCase()));
 
     const typZh = (parsedData.type || '').trim();
     const typEn = (rawHints.type || '').trim();
@@ -310,7 +416,7 @@ class CoupangProcessor {
     const targetProfileInfo = this.getTargetTemplateAndCategory(prodZhName, typeStr);
     const profiles = (this.templateProfiles && this.templateProfiles.length > 0)
       ? this.templateProfiles
-      : (window.AppConfig ? window.AppConfig.getDefaultProfiles() : []);
+      : CoupangProcessor.getDefaultProfiles();
 
     let currentProfile = profiles.find(p => p.id === targetProfileInfo.template_id);
     if (!currentProfile) {
@@ -358,15 +464,14 @@ class CoupangProcessor {
 
       // 2. Collection matching (直通 Excel COLLECTION 欄位比對)
       let collMatched = false;
+      const utils = (typeof window !== 'undefined' && window.SharedUtils) ? window.SharedUtils : (typeof require !== 'undefined' ? require('./shared_utils.js') : null);
+
       for (const cal of collectionCandidates) {
-        const calU = cal.toUpperCase();
-        const escapedCal = calU.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const wordRegex = new RegExp(`(?:^|[\\s_\\-\\/])${escapedCal}(?:$|[\\s_\\-\\/])`, 'i');
-        if (wordRegex.test(relU)) {
+        if (utils ? utils.matchToken(relU, cal, { boundaryMatch: true }) : relU.includes(cal.toUpperCase())) {
           score += 60;
           collMatched = true;
           break;
-        } else if (relU.includes(calU)) {
+        } else if (relU.includes(cal.toUpperCase())) {
           score += 40;
           collMatched = true;
           break;
@@ -374,8 +479,7 @@ class CoupangProcessor {
       }
       if (!collMatched && collectionCandidates.length > 0) {
         for (const cal of collectionCandidates) {
-          const calU = cal.toUpperCase();
-          if (files.some(f => f.name.toUpperCase().includes(calU))) {
+          if (files.some(f => utils ? utils.matchToken(f.name, cal, { boundaryMatch: true }) : f.name.toUpperCase().includes(cal.toUpperCase()))) {
             score += 25;
             collMatched = true;
             break;
@@ -385,9 +489,7 @@ class CoupangProcessor {
 
       // 3. Product Sub-Type matching (直通 Excel TYPE 欄位細分比對，如 APRON vs VEST, TOWEL vs POCKET)
       for (const t of typeTokensEn) {
-        const escapedT = t.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const tRegex = new RegExp(`(?:^|[\\s_\\-\\/])${escapedT}(?:$|[\\s_\\-\\/])`, 'i');
-        if (tRegex.test(relU)) {
+        if (utils ? utils.matchToken(relU, t, { boundaryMatch: true }) : relU.includes(t)) {
           score += 45;
         }
       }
@@ -395,28 +497,24 @@ class CoupangProcessor {
       // 4. Color matching: 優先比對中文顏色 (Photo/Collection/Type/中文顏色/)
       let colorMatched = false;
       if (colorZh) {
-        const colorZhU = colorZh.toUpperCase();
-        const foundIdx = relU.indexOf(colorZhU);
-        if (foundIdx !== -1) {
+        if (utils ? utils.matchToken(relU, colorZh, { boundaryMatch: true, strictNoPrefix: true }) : relU.includes(colorZh.toUpperCase())) {
           score += 40;
           colorMatched = true;
-        } else if (files.some(f => f.name.includes(colorZh))) {
+        } else if (files.some(f => utils ? utils.matchToken(f.name, colorZh, { boundaryMatch: true, strictNoPrefix: true }) : f.name.includes(colorZh))) {
           score += 30;
           colorMatched = true;
         }
       }
 
       // 備用：比對英文顏色
-      if (!colorMatched && colorEn && relU.includes(colorEn.toUpperCase())) {
+      if (!colorMatched && colorEn && (utils ? utils.matchToken(relU, colorEn, { boundaryMatch: true }) : relU.includes(colorEn.toUpperCase()))) {
         score += 35;
         colorMatched = true;
       }
 
       // 5. 尺寸精準邊界加分
       if (normTargetSize) {
-        const escaped = normTargetSize.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const szRegex = new RegExp(`(?:^|[\\s_\\-\\(\\[])${escaped}(?:$|[\\s_\\-\\)\\]]|_?背標|\\.[a-zA-Z0-9]+$)`, 'i');
-        if (files.some(f => szRegex.test(f.name))) {
+        if (files.some(f => utils ? utils.matchToken(f.name, normTargetSize, { boundaryMatch: true }) : f.name.includes(normTargetSize))) {
           score += 15;
         }
       }
@@ -434,7 +532,7 @@ class CoupangProcessor {
       for (const f of files) {
         const fl = f.name.toLowerCase();
         if (f.name.includes('主圖') || fl.startsWith('main') || f.name.includes('情境') || f.name.includes('尺寸') || fl.includes('chart')) continue;
-        const lblScore = this.calculateBackLabelScore(f.name, normTargetSize, zhKeywords, colorZh, collZh, collEn);
+        const lblScore = this.calculateBackLabelScore(f.name, normTargetSize, zhKeywords, colorZh, collZh, collEn, prodZhName);
         if (lblScore > maxLblScore) maxLblScore = lblScore;
       }
 
@@ -470,6 +568,10 @@ class CoupangProcessor {
     let chart = null;
     let label = null;
 
+    let bestMainScore = 0;
+    let bestSc1Score = 0;
+    let bestSc2Score = 0;
+
     const isImgFile = (name) => /\.(jpe?g|png|webp|jfif|avif)$/i.test(name || '');
 
     for (const f of matchedFiles) {
@@ -477,23 +579,39 @@ class CoupangProcessor {
       const fnL = fn.toLowerCase();
       if (!isImgFile(fn)) continue;
 
-      // 扁平目錄防呆：若無子目錄區分，必須符合商品名稱或條碼特徵，嚴禁亂抓
+      // 扁平目錄防呆：若無子目錄區分，必須符合商品名稱或條碼特徵
       if (isFlatDir) {
         const matchesProduct = (skuStr && fn.includes(skuStr)) ||
-          (colorZh && fn.includes(colorZh)) ||
-          (collZh && fn.includes(collZh)) ||
+          (colorZh && (utils ? utils.matchToken(fn, colorZh, { strictNoPrefix: true }) : fn.includes(colorZh))) ||
+          (collZh && (utils ? utils.matchToken(fn, collZh) : fn.includes(collZh))) ||
           (zhKeywords.length > 0 && zhKeywords.some(k => fn.includes(k)));
         if (!matchesProduct) continue;
       }
 
-      if (fn.includes('主圖') || fnL.startsWith('main') || fn.includes('主圖1')) {
-        if (!mainImg) mainImg = f;
-      } else if (fn.includes('情境圖 1') || fn.includes('情境圖1') || fn.includes('情境1') || fn === '情境圖.jpg' || fn === '情境圖.png') {
-        if (!sc1) sc1 = f;
-      } else if (fn.includes('情境圖 2') || fn.includes('情境圖2') || fn.includes('情境2')) {
-        if (!sc2) sc2 = f;
-      } else if (fn.includes('尺寸圖') || fn.includes('尺寸表') || fnL.includes('chart') || fn.includes('尺寸規格')) {
-        if (!chart) chart = f;
+      // 尺寸圖挑選
+      if (!chart && (fn.includes('尺寸圖') || fn.includes('尺寸表') || fnL.includes('chart') || fn.includes('尺寸規格'))) {
+        chart = f;
+      }
+
+      // 主圖打分評選 (最高分勝出，取代先到先得)
+      const mScore = this.calculateMainImageScore(fn, skuStr, colorZh, colorEn, collZh, collEn, zhKeywords, isFlatDir);
+      if (mScore > bestMainScore && mScore >= 30) {
+        bestMainScore = mScore;
+        mainImg = f;
+      }
+
+      // 情境圖 1 打分評選
+      const s1Score = this.calculateSceneImageScore(fn, 1, skuStr, colorZh, colorEn, collZh, zhKeywords);
+      if (s1Score > bestSc1Score) {
+        bestSc1Score = s1Score;
+        sc1 = f;
+      }
+
+      // 情境圖 2 打分評選
+      const s2Score = this.calculateSceneImageScore(fn, 2, skuStr, colorZh, colorEn, collZh, zhKeywords);
+      if (s2Score > bestSc2Score) {
+        bestSc2Score = s2Score;
+        sc2 = f;
       }
     }
 
@@ -511,7 +629,7 @@ class CoupangProcessor {
 
     let bestScore = 0;
     for (const f of backLabelCandidates) {
-      const fScore = this.calculateBackLabelScore(f.name, normTargetSize, zhKeywords, colorZh, collZh, collEn);
+      const fScore = this.calculateBackLabelScore(f.name, normTargetSize, zhKeywords, colorZh, collZh, collEn, prodZhName);
       if (fScore > bestScore && fScore >= 90) {
         bestScore = fScore;
         label = f;
@@ -527,7 +645,7 @@ class CoupangProcessor {
           const isCollMatch = (collZh && dPathU.includes(collZh.toUpperCase())) || (collEn && dPathU.includes(collEn.toUpperCase()));
           for (const f of files) {
             if (!isImgFile(f.name)) continue;
-            let fScore = this.calculateBackLabelScore(f.name, normTargetSize, zhKeywords, colorZh, collZh, collEn);
+            let fScore = this.calculateBackLabelScore(f.name, normTargetSize, zhKeywords, colorZh, collZh, collEn, prodZhName);
             if (isCollMatch && fScore > 0) fScore += 20;
             if (fScore > bestGlobalScore && fScore >= 90) {
               bestGlobalScore = fScore;
@@ -540,9 +658,13 @@ class CoupangProcessor {
 
     // 3. 尺寸圖單一明確回退 (Fallback 1)：若當前顏色資料夾無尺寸圖，向上層/同系列資料夾尋找
     if (!chart && matchedFolder) {
-      const parentPath = matchedFolder.substring(0, matchedFolder.lastIndexOf('/'));
+      const lastSlashIdx = matchedFolder.lastIndexOf('/');
+      const parentPath = lastSlashIdx !== -1 ? matchedFolder.substring(0, lastSlashIdx) : '';
       for (const [dPath, files] of this.folderMap.entries()) {
-        if (dPath.startsWith(parentPath) || (collZh && dPath.toUpperCase().includes(collZh.toUpperCase())) || (collEn && dPath.toUpperCase().includes(collEn.toUpperCase()))) {
+        const isParentMatch = parentPath && parentPath.length > 0 && dPath.startsWith(parentPath);
+        const isCollMatch = (collZh && (utils ? utils.matchToken(dPath, collZh) : dPath.toUpperCase().includes(collZh.toUpperCase()))) ||
+                            (collEn && (utils ? utils.matchToken(dPath, collEn) : dPath.toUpperCase().includes(collEn.toUpperCase())));
+        if (isParentMatch || isCollMatch) {
           for (const f of files) {
             const fn = f.name;
             const fnL = fn.toLowerCase();
@@ -669,8 +791,9 @@ class CoupangProcessor {
   }
 
   static extractMappingsFromExcel(workbook, headerRow = 3, rowStart = 4, filterColName = '中文背標', targetSheetName = null, templateProfiles = []) {
-    const ws = window.SharedUtils
-      ? window.SharedUtils.getSourceSheet(workbook, targetSheetName, headerRow)
+    const utils = CoupangProcessor.getUtils();
+    const ws = utils
+      ? utils.getSourceSheet(workbook, targetSheetName, headerRow)
       : (workbook.sheet(targetSheetName) || workbook.sheet(0));
     if (!ws || !ws.usedRange()) return { collections: {}, colors: {} };
 
@@ -684,7 +807,7 @@ class CoupangProcessor {
       const val = ws.cell(headerRow, c).value();
       if (val) {
         const raw = val.toString().trim();
-        const norm = window.SharedUtils ? window.SharedUtils.normalizeKey(raw) : raw;
+        const norm = utils ? utils.normalizeKey(raw) : raw;
         if (!(raw in headers)) headers[raw] = c;
         if (!(norm in headers)) headers[norm] = c;
       }
@@ -699,7 +822,7 @@ class CoupangProcessor {
     const getVal = (r, colIdx) => {
       if (!colIdx) return '';
       const cell = ws.cell(r, colIdx);
-      if (window.SharedUtils) return String(window.SharedUtils.getCellValue(cell)).trim();
+      if (utils) return String(utils.getCellValue(cell)).trim();
       const v = cell.value();
       if (v === null || v === undefined) return '';
       if (typeof v === 'object' && typeof v.text === 'function') return v.text().trim();
@@ -861,4 +984,9 @@ class CoupangProcessor {
   }
 }
 
-window.CoupangProcessor = CoupangProcessor;
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = CoupangProcessor;
+}
+if (typeof window !== 'undefined') {
+  window.CoupangProcessor = CoupangProcessor;
+}

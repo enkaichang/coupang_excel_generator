@@ -1,4 +1,4 @@
-window.AppConfig = {
+const AppConfig = {
   getDefaultSourceConfig: function() {
     return {
       file_path: "商品資料.xlsx",
@@ -108,6 +108,34 @@ window.AppConfig = {
           dynamic: { ...baseline.dynamic },
           fixed: { ...baseline.fixed }
         }
+      },
+      {
+        id: 'TOY',
+        name: '玩具及訓練工具',
+        keywords: ['TOY', 'DUMMY', 'FLOATING TOY', 'CALM', '玩具', '玩偶', '安撫玩偶', '訓練球', '訓練玩具', '拉扯玩具'],
+        template_type: 'ACCESSORIES',
+        template_file_name: '商品報價單_生活與訓練配件.xlsx',
+        category_name: '寵物用品>犬用玩具>咬咬/拉扯玩具 (66040)',
+        subfolder: '玩具及訓練工具',
+        is_builtin: true,
+        field_mappings: {
+          dynamic: { ...baseline.dynamic },
+          fixed: { ...baseline.fixed }
+        }
+      },
+      {
+        id: 'BALL',
+        name: '玩具球',
+        keywords: ['BALL', '彈力球', '球'],
+        template_type: 'ACCESSORIES',
+        template_file_name: '商品報價單_生活與訓練配件.xlsx',
+        category_name: '寵物用品>犬用玩具>球類玩具 (66041)',
+        subfolder: '玩具球',
+        is_builtin: true,
+        field_mappings: {
+          dynamic: { ...baseline.dynamic },
+          fixed: { ...baseline.fixed }
+        }
       }
     ];
   },
@@ -172,3 +200,10 @@ window.AppConfig = {
     return {};
   }
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = AppConfig;
+}
+if (typeof window !== 'undefined') {
+  window.AppConfig = AppConfig;
+}

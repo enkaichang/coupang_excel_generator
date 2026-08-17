@@ -167,6 +167,108 @@
     },
 
     /**
+     * 通用邊界與字詞精確比對器 (Anti-containment & Exact Token Matcher)
+     * 支援：
+     * 1. 英文/數字 ASCII 單詞邊界檢查 (防止 CAT 誤中 CATEGORY、S 誤中 XS、RED 誤中 DARKRED)
+     * 2. 中文符號/中英交界邊界檢查 (支援 _, -, /, 空白, 括號, 檔名副檔名邊界, BATHROBE黑, COLLAR甜杏)
+     * 3. 中文修飾前綴防護 (strictNoPrefix: 防止 紅色 誤中 粉紅色、暗紅色、酒紅色)
+     * 
+     * @param {string} text 待搜尋的全文 (如檔名或路徑)
+     * @param {string} target 要尋找的關鍵字/Token (如顏色、尺寸、系列、品名詞)
+     * @param {object} options 設定選項
+     *   - exactOnly: boolean (是否要求全文完全相符)
+     *   - boundaryMatch: boolean (預設 true, 是否要求處於單詞/符號邊界)
+     *   - strictNoPrefix: boolean (預設 true, 是否排除中文修飾前綴詞)
+     *   - caseSensitive: boolean (預設 false)
+     * @returns {boolean}
+     */
+    matchToken: function(text, target, options = {}) {
+      if (!text || !target) return false;
+      const exactOnly = options.exactOnly || false;
+      const boundaryMatch = options.boundaryMatch !== undefined ? options.boundaryMatch : true;
+      const strictNoPrefix = options.strictNoPrefix !== undefined ? options.strictNoPrefix : true;
+      const caseSensitive = options.caseSensitive || false;
+
+      const normText = this.normalizeKey(text);
+      const normTarget = this.normalizeKey(target);
+      if (!normText || !normTarget) return false;
+
+      const t = caseSensitive ? normText : normText.toUpperCase();
+      const k = caseSensitive ? normTarget : normTarget.toUpperCase();
+
+      if (exactOnly) {
+        return t === k;
+      }
+
+      if (t === k) return true;
+      if (k.length > t.length) return false;
+
+      const isTargetAscii = /^[\x00-\x7F]+$/.test(k);
+      const escapedK = k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+      if (boundaryMatch) {
+        if (isTargetAscii) {
+          const asciiBoundaryRegex = new RegExp(`(?:^|[^A-Z0-9])${escapedK}(?:$|[^A-Z0-9]|_?背標|\\.[a-zA-Z0-9]+$)`, caseSensitive ? '' : 'i');
+          if (asciiBoundaryRegex.test(t)) {
+            return true;
+          }
+        } else {
+          // 中文邊界：前後為符號、空白、英數字交界或字串起訖點
+          const zhBoundaryRegex = new RegExp(`(?:^|[^a-zA-Z0-9\u4e00-\u9fa5]|[a-zA-Z0-9])${escapedK}(?:$|[^a-zA-Z0-9\u4e00-\u9fa5]|[a-zA-Z0-9]|_?背標|\\.[a-zA-Z0-9]+$)`, caseSensitive ? '' : 'i');
+          if (zhBoundaryRegex.test(t)) {
+            // 需再確認前綴字元非中文修飾前綴
+            const matchIdx = t.indexOf(k);
+            if (matchIdx !== -1) {
+              const prevChar = matchIdx > 0 ? t[matchIdx - 1] : '';
+              const prefixChars = '粉暗酒深淺亮桃水寶草青嫩土鐵米墨灰紫橘橙軍鮮雙金銀微超抗防透涼';
+              if (!strictNoPrefix || !prefixChars.includes(prevChar)) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+
+      // 上下文前綴/後綴檢驗
+      let startIdx = 0;
+      while ((startIdx = t.indexOf(k, startIdx)) !== -1) {
+        let isValidMatch = true;
+
+        if (startIdx > 0) {
+          const prevChar = t[startIdx - 1];
+          if (isTargetAscii && /[A-Z0-9]/i.test(prevChar)) {
+            isValidMatch = false;
+          }
+          if (strictNoPrefix) {
+            const prefixChars = '粉暗酒深淺亮桃水寶草青嫩土鐵米墨灰紫橘橙軍鮮雙金銀微超抗防透涼';
+            if (prefixChars.includes(prevChar)) {
+              isValidMatch = false;
+            }
+          }
+        }
+
+        if ((startIdx + k.length) < t.length) {
+          const nextChar = t[startIdx + k.length];
+          if (isTargetAscii && /[A-Z0-9]/i.test(nextChar)) {
+            isValidMatch = false;
+          }
+        }
+
+        if (isValidMatch) {
+          return true;
+        }
+
+        startIdx += k.length;
+      }
+
+      return false;
+    },
+
+    isExactTokenMatch: function(text, token) {
+      return this.matchToken(text, token, { boundaryMatch: true, strictNoPrefix: true });
+    },
+
+    /**
      * 來源工作表自動探測 (共用統一函式)
      */
     getSourceSheet: function(workbook, targetSheetName = null, headerRow = 3) {
@@ -213,5 +315,10 @@
     }
   };
 
-  window.SharedUtils = SharedUtils;
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SharedUtils;
+  }
+  if (typeof window !== 'undefined') {
+    window.SharedUtils = SharedUtils;
+  }
 })();
