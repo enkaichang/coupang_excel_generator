@@ -505,56 +505,32 @@ img {
 <li><strong>選取規則</strong>：所有資料夾依總分由高到低排序，最高分者即為該商品的圖片來源資料夾。</li>
 </ul>
 <hr />
-<h3>主圖與情境圖選取評分制度</h3>
-<p>為了避免顏色混淆（例如商品是「紅色」，卻誤抓到「粉紅色」的主圖），系統會計算資料夾內所有圖片的分數，選出最符合的圖片：</p>
+<h3>主圖與情境圖選取命名規範</h3>
+<p>系統採嚴格專屬檔名比對，恪守「寧可空白，也不要抓錯」原則，只抓取符合下列關鍵字的圖片：</p>
 <table>
 <thead>
 <tr>
 <th style="text-align: left;">圖檔類型</th>
-<th style="text-align: left;">加分項目與條件</th>
-<th style="text-align: center;">增加積分</th>
+<th style="text-align: left;">判定命名規則（只要符合即抓取）</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td style="text-align: left;"><strong>商品正面主圖</strong></td>
-<td style="text-align: left;">檔名包含 <code>主圖</code> / <code>main</code> / <code>主圖1</code> / <code>main_photo</code></td>
-<td style="text-align: center;"><strong>+100 分</strong>（一般圖片 +30 分）</td>
+<td style="text-align: left;">檔名包含 <code>主圖</code>、<code>main</code> 或 <code>主圖1</code>（如 <code>主圖.jpg</code>、<code>main.jpg</code>）</td>
 </tr>
 <tr>
-<td style="text-align: left;"></td>
-<td style="text-align: left;">檔名完全吻合商品 <code>中文顏色</code>（例如紅色不會誤加給粉紅色）</td>
-<td style="text-align: center;"><strong>+50 分</strong>（部分包含 +10 分）</td>
+<td style="text-align: left;"><strong>情境圖 1</strong></td>
+<td style="text-align: left;">檔名包含 <code>情境圖 1</code>、<code>情境圖1</code>、<code>情境1</code>、<code>scene1</code> 或 <code>1</code>（如 <code>情境圖1.jpg</code>、<code>1.jpg</code>）</td>
 </tr>
 <tr>
-<td style="text-align: left;"></td>
-<td style="text-align: left;">檔名完全吻合商品英文 <code>Color</code> 顏色名稱</td>
-<td style="text-align: center;"><strong>+40 分</strong></td>
-</tr>
-<tr>
-<td style="text-align: left;"></td>
-<td style="text-align: left;">檔名包含商品 <code>SKU</code> 或 <code>EAN</code> 條碼</td>
-<td style="text-align: center;"><strong>+80 分</strong></td>
-</tr>
-<tr>
-<td style="text-align: left;"></td>
-<td style="text-align: left;">檔名包含商品 <code>Collection</code> 或品名關鍵詞</td>
-<td style="text-align: center;"><strong>+20 分 / 每個詞 +15 分</strong></td>
-</tr>
-<tr>
-<td style="text-align: left;"><strong>情境圖 1 / 2</strong></td>
-<td style="text-align: left;">檔名包含 <code>情境圖 1</code> / <code>情境圖1</code> / <code>情境1</code> / <code>scene1</code> / <code>1.jpg</code> 等</td>
-<td style="text-align: center;"><strong>+100 分</strong></td>
-</tr>
-<tr>
-<td style="text-align: left;"></td>
-<td style="text-align: left;">檔名包含商品 <code>中文顏色</code> / <code>SKU</code> 條碼</td>
-<td style="text-align: center;"><strong>+30 / +50 分</strong></td>
+<td style="text-align: left;"><strong>情境圖 2</strong></td>
+<td style="text-align: left;">檔名包含 <code>情境圖 2</code>、<code>情境圖2</code>、<code>情境2</code>、<code>scene2</code> 或 <code>2</code>（如 <code>情境圖2.jpg</code>、<code>2.jpg</code>）</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li><strong>選取規則</strong>：計算各圖檔分數後，由最高分者作為該商品的主圖或情境圖。</li>
+<li><strong>選取規則</strong>：僅抓取符合專屬命名規則的圖檔，若目錄內未找到符合條件之圖檔則嚴格保持留空，絕不抓取其他圖片或背標冒充。</li>
 </ul>
 <hr />
 <h3>中文背標配對評分制度</h3>

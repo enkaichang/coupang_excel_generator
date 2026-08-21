@@ -5,7 +5,7 @@
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-coupang__excel__generator-181717?logo=github)](https://github.com/enkaichang/coupang_excel_generator)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version: v2.14.0](https://img.shields.io/badge/Version-v2.14.0-blue.svg)](https://github.com/enkaichang/coupang_excel_generator)
+[![Version: v2.15.2](https://img.shields.io/badge/Version-v2.15.2-blue.svg)](https://github.com/enkaichang/coupang_excel_generator)
 
 ---
 
@@ -105,6 +105,27 @@ coupang_excel_generator/
 - **備份與還原**：提供「匯出備份 (JSON)」與「匯入設定 (JSON)」功能，輕鬆備份與跨裝置轉移完整設定。
 
 ## 📝 版本日誌 (Changelog)
+
+### [v2.15.2] - 2026-08-21
+#### 🎯 完整中文品名嚴格包含比對與同系列子字串目錄區分 (Exact Full Name Matching & Subset Disambiguation)
+- **背標檔名全品名比對修正**：修正背標比對函式中去除空格與底線後的比對邏輯（`nameClean.includes(cleanProdName)`），確保精確完整包含全中文品名的背標圖檔能如實獲得 +50 分優勢，杜絕短品名與長品名兩款同系列商品同分平手問題。
+- **目錄路徑全品名比對加分**：在目錄評分階段新增全中文品名包含判定（+60 分），使「毛絨薯條」與「毛絨薯條和雞腿兩件套」等具備子字串重疊特徵之同系列商品，能各自精準以高分鎖定對應的獨立商品目錄。
+
+---
+
+### [v2.15.1] - 2026-08-21
+#### 🛡️ 輸出目錄自動隔離與目錄防污染防護 (Output Directory Isolation & Anti-Pollution)
+- **產出目錄自動過濾**：在圖片讀取與目錄結構掃描模組中，自動過濾並排除先前產出的 `result/`、`output/`、`__MACOSX/` 與 `.git/` 等目錄，徹底防止選取品牌根目錄時舊產出檔案干擾圖片匹配評分。
+
+---
+
+### [v2.15.0] - 2026-08-21
+#### 🖼️ 主圖與情境圖精確命名限定與加分機制簡化 (Strict Main & Scene Image Name Matching)
+- **主圖嚴格關鍵字匹配**：主圖選取機制精簡為僅抓取包含 `主圖`、`main`、`主圖1` 之專屬圖檔，移除所有顏色、條碼、系列及品名關鍵字累加分數，徹底避免背標或多尺寸圖檔因包含完整品名關鍵字而誤篡位為主圖。
+- **情境圖嚴格關鍵字匹配**：情境圖選取機制精簡為僅抓取包含 `情境圖 1`/`情境圖1`/`情境1`/`scene1`/`1`（情境圖 2 依此類推），移除其餘加分項目。
+- **貫徹「寧可空白，也不要抓錯」**：移除主圖與情境圖在未匹配到專屬圖檔時隨機猜測目錄內其他圖檔之 Fallback 行為，無專屬圖檔時嚴格保持留空。
+
+---
 
 ### [v2.14.0] - 2026-08-20
 #### 📦 同款報價單模板資料夾與活頁簿合併輸出架構重構 (Template-Grouped Output & Shared Workbook)

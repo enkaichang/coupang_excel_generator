@@ -14,6 +14,9 @@ class CoupangProcessor {
     this.folderMap = new Map();
     for (const file of (this.photoFiles || [])) {
       const normPath = (file.webkitRelativePath || file.name || '').replace(/\\/g, '/');
+      if (/(?:^|\/)(result|output|__macosx|\.git)(?:\/|$)/i.test(normPath)) {
+        continue;
+      }
       const pathParts = normPath.split('/');
       pathParts.pop();
       const dirPath = pathParts.join('/');
@@ -92,81 +95,42 @@ class CoupangProcessor {
     return textUpper.includes(kwUpper);
   }
 
-  calculateMainImageScore(fileName, skuStr, colorZh, colorEn, collZh, collEn, zhKeywords = [], isFlatDir = false) {
+  calculateMainImageScore(fileName) {
     if (!fileName) return 0;
     const fn = fileName;
     const fnL = fn.toLowerCase();
-    let score = 0;
 
-    const isExplicitMain = fn.includes('主圖') || fnL.startsWith('main') || fn.includes('主圖1') || fnL.includes('main_photo') || fnL.includes('mainphoto');
+    // 嚴格僅抓「主圖」、「main」、「主圖1」
+    const isExplicitMain = fn.includes('主圖') || fnL.includes('main') || fn.includes('主圖1');
     if (isExplicitMain) {
-      score += 100;
-    } else {
-      if (!fn.includes('情境') && !fn.includes('尺寸') && !fn.includes('背標') && !fnL.includes('chart') && !fnL.includes('scene') && !fnL.includes('label') && fn !== '.DS_Store' && !fnL.endsWith('.db')) {
-        score += 30;
-      } else {
-        return 0;
-      }
+      return 100;
     }
-
-    const utils = (typeof window !== 'undefined' && window.SharedUtils) ? window.SharedUtils : (typeof require !== 'undefined' ? require('./shared_utils.js') : null);
-
-    // 顏色精確加分 (前綴防護: 防止粉紅色主圖被加給紅色)
-    if (colorZh) {
-      if (utils ? utils.matchToken(fn, colorZh, { boundaryMatch: true, strictNoPrefix: true }) : fn.includes(colorZh)) {
-        score += 50;
-      } else if (fn.includes(colorZh)) {
-        score += 10;
-      }
-    }
-    if (colorEn && (utils ? utils.matchToken(fn, colorEn, { boundaryMatch: true }) : fn.toUpperCase().includes(colorEn.toUpperCase()))) {
-      score += 40;
-    }
-
-    // SKU / EAN 條碼精確命中
-    if (skuStr && fn.includes(skuStr)) {
-      score += 80;
-    }
-
-    // 系列命中加分
-    if (collZh && (utils ? utils.matchToken(fn, collZh, { boundaryMatch: true }) : fn.includes(collZh))) {
-      score += 20;
-    }
-
-    // 中文品名關鍵詞命中加分
-    for (const kw of zhKeywords) {
-      if (kw.length >= 2 && fn.includes(kw)) {
-        score += 15;
-      }
-    }
-
-    return score;
+    return 0;
   }
 
-  calculateSceneImageScore(fileName, sceneIndex = 1, skuStr, colorZh, colorEn, collZh, zhKeywords = []) {
+  calculateSceneImageScore(fileName, sceneIndex = 1) {
     if (!fileName) return 0;
     const fn = fileName;
     const fnL = fn.toLowerCase();
-    let score = 0;
+    const nameNoExt = fn.replace(/\.[^/.]+$/, '').trim().toLowerCase();
 
     const targetNum = String(sceneIndex);
-    const isExplicitScene = fn.includes(`情境圖 ${targetNum}`) || fn.includes(`情境圖${targetNum}`) || fn.includes(`情境${targetNum}`) || fnL.includes(`scene${targetNum}`) || fnL.includes(`scene_${targetNum}`) || (sceneIndex === 1 && (fn === '情境圖.jpg' || fn === '情境圖.png' || fn === '1.jpg' || fn === '1.png')) || (sceneIndex === 2 && (fn === '2.jpg' || fn === '2.png'));
+    // 嚴格僅抓「情境圖 {n}」、「情境圖{n}」、「情境{n}」、「scene{n}」、「{n}」
+    const isExplicitScene =
+      fn.includes(`情境圖 ${targetNum}`) ||
+      fn.includes(`情境圖${targetNum}`) ||
+      fn.includes(`情境${targetNum}`) ||
+      fnL.includes(`scene${targetNum}`) ||
+      fnL.includes(`scene_${targetNum}`) ||
+      fnL.includes(`scene ${targetNum}`) ||
+      nameNoExt === targetNum ||
+      (nameNoExt === '情境圖' && sceneIndex === 1) ||
+      (nameNoExt === '情境' && sceneIndex === 1);
 
     if (isExplicitScene) {
-      score += 100;
-    } else {
-      return 0;
+      return 100;
     }
-
-    const utils = (typeof window !== 'undefined' && window.SharedUtils) ? window.SharedUtils : (typeof require !== 'undefined' ? require('./shared_utils.js') : null);
-
-    if (colorZh && (utils ? utils.matchToken(fn, colorZh, { boundaryMatch: true, strictNoPrefix: true }) : fn.includes(colorZh))) {
-      score += 30;
-    }
-    if (skuStr && fn.includes(skuStr)) {
-      score += 50;
-    }
-    return score;
+    return 0;
   }
 
   getTargetTemplateAndCategory(prodName = '', typeStr = '') {
@@ -297,6 +261,7 @@ class CoupangProcessor {
     const nameNoExt = nameRaw.normalize('NFKC').toUpperCase();
     const nameNormalized = nameRaw.replace(/_/g, ' ');
     const nameNoUnderscore = nameRaw.replace(/_/g, '');
+    const nameClean = this.normStr(nameRaw);
     let sizeScore = 0;
 
     if (normTargetSize === 'UNISIZE' || normTargetSize === '單一尺寸' || normTargetSize === 'ONE' || normTargetSize === 'ONE SIZE') {
@@ -335,17 +300,17 @@ class CoupangProcessor {
 
     let totalScore = sizeScore;
 
-    // 圖片移除 '_' 後比對是否包含中文品名 (支援包含完整中文品名與尺寸之圖檔)
+    // 圖片經統一正規化後比對是否包含完整中文品名 (支援包含完整中文品名之圖檔)
     if (prodZhName) {
-      const cleanProdName = prodZhName.replace(/[\s_+\/\-]+/g, '');
-      if (cleanProdName.length >= 3 && nameNoUnderscore.includes(cleanProdName)) {
+      const cleanProdName = this.normStr(prodZhName);
+      if (cleanProdName.length >= 3 && nameClean.includes(cleanProdName)) {
         totalScore += 50;
       }
     }
 
     // 中文品名核心詞交集加分 (每個吻合關鍵詞 +25 分，支援底線轉換、去底線與直接匹配)
     for (const kw of zhKeywords) {
-      if (kw.length >= 2 && (nameRaw.includes(kw) || nameNormalized.includes(kw) || nameNoUnderscore.includes(kw))) {
+      if (kw.length >= 2 && (nameRaw.includes(kw) || nameNormalized.includes(kw) || nameNoUnderscore.includes(kw) || nameClean.includes(kw))) {
         totalScore += 25;
       }
     }
@@ -456,6 +421,13 @@ class CoupangProcessor {
     for (const [dirPath, files] of this.folderMap.entries()) {
       const relU = dirPath.toUpperCase();
       let score = 0;
+
+      // 0. 目錄路徑完整包含中文品名加分 (+60 分，長詞/精準品名目錄最高優先權)
+      const dirClean = this.normStr(dirPath);
+      const cleanProd = this.normStr(prodZhName);
+      if (cleanProd.length >= 3 && dirClean.includes(cleanProd)) {
+        score += 60;
+      }
 
       // 1. Type Profile matching: 動態判定路徑是否符合該品類關鍵字
       let typeMatched = false;
@@ -606,23 +578,23 @@ class CoupangProcessor {
         chart = f;
       }
 
-      // 主圖打分評選 (最高分勝出，取代先到先得)
-      const mScore = this.calculateMainImageScore(fn, skuStr, colorZh, colorEn, collZh, collEn, zhKeywords, isFlatDir);
-      if (mScore > bestMainScore && mScore >= 30) {
+      // 主圖挑選 (嚴格只抓主圖/main/主圖1)
+      const mScore = this.calculateMainImageScore(fn);
+      if (mScore > bestMainScore && mScore >= 100) {
         bestMainScore = mScore;
         mainImg = f;
       }
 
-      // 情境圖 1 打分評選
-      const s1Score = this.calculateSceneImageScore(fn, 1, skuStr, colorZh, colorEn, collZh, zhKeywords);
-      if (s1Score > bestSc1Score) {
+      // 情境圖 1 挑選 (嚴格只抓情境圖 1/情境圖1/情境1/scene1/1)
+      const s1Score = this.calculateSceneImageScore(fn, 1);
+      if (s1Score > bestSc1Score && s1Score >= 100) {
         bestSc1Score = s1Score;
         sc1 = f;
       }
 
-      // 情境圖 2 打分評選
-      const s2Score = this.calculateSceneImageScore(fn, 2, skuStr, colorZh, colorEn, collZh, zhKeywords);
-      if (s2Score > bestSc2Score) {
+      // 情境圖 2 挑選 (嚴格只抓情境圖 2/情境圖2/情境2/scene2/2)
+      const s2Score = this.calculateSceneImageScore(fn, 2);
+      if (s2Score > bestSc2Score && s2Score >= 100) {
         bestSc2Score = s2Score;
         sc2 = f;
       }
@@ -672,29 +644,6 @@ class CoupangProcessor {
       }
     }
 
-    // 4. 主圖單一明確回退 (Fallback 1)：非扁平目錄下，取該目錄第一張一般圖檔
-    if (!mainImg && !isFlatDir) {
-      const imgs = matchedFiles.filter(f => {
-        const name = f.name.toLowerCase();
-        return isImgFile(name) && !name.includes('情境') && !name.includes('尺寸') && !name.includes('背標');
-      });
-      if (imgs.length > 0) mainImg = imgs[0];
-    }
-
-    // 5. 情境圖單一明確回退 (Fallback 1)：非扁平目錄下，取該目錄其餘一般圖檔
-    if (!sc1 && !isFlatDir) {
-      const extraImgs = matchedFiles.filter(f => {
-        const name = f.name.toLowerCase();
-        return isImgFile(name) && f !== mainImg && !name.includes('尺寸') && !name.includes('背標');
-      });
-      if (extraImgs.length > 0) {
-        sc1 = extraImgs[0];
-        if (extraImgs.length > 1 && !sc2) {
-          sc2 = extraImgs[1];
-        }
-      }
-    }
-
     // 恪守「寧可空白，也不要抓錯」：若未找到對應圖檔即維持 null，絕不任意冒充
     return { main: mainImg, sc1: sc1, sc2: sc2, chart: chart, label: label };
   }
@@ -727,8 +676,8 @@ class CoupangProcessor {
     const catRegex = new RegExp(`(?:${escapedKws})\\s*(.+)$`, 'i');
 
     for (const file of photoFilesArray) {
-      const relPath = file.webkitRelativePath || '';
-      if (!relPath) continue;
+      const relPath = (file.webkitRelativePath || file.name || '').replace(/\\/g, '/');
+      if (!relPath || /(?:^|\/)(result|output|__macosx|\.git)(?:\/|$)/i.test(relPath)) continue;
 
       const parts = relPath.split('/').filter(p => p.trim().length > 0);
       if (parts.length <= 1) continue;

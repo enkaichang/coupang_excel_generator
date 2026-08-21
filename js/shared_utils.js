@@ -26,15 +26,15 @@
     },
 
     /**
-     * 深度標準化字串 (用於模糊比對與別名查找)：
-     * 移除所有空白、括號、換行、底線、破折號、特殊標記並轉大寫
+     * 深度標準化字串 (用於模糊比對、全品名精準包含與別名查找)：
+     * 統一 NFKC、移除 BOM/零寬字元、所有全半形空白、換行、括號、標點與分隔符號並轉大寫
      */
     cleanStrForMatching: function(str) {
       if (str === null || str === undefined) return '';
       return String(str)
         .normalize('NFKC')
         .replace(/[\uFEFF\u200B]/g, '')
-        .replace(/[\u3000\u00A0\s\r\n\(\)（）\-_*\/\\#\[\]]/g, '')
+        .replace(/[\u3000\u00A0\s\r\n\t\(\)（）\-_*\/\\#\[\]+、,，.。:：;；!！?？~～`'"]/g, '')
         .toUpperCase()
         .trim();
     },

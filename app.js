@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.14.0';
+const APP_VERSION = 'v2.15.2';
 
 function normalizeHeaderKey(str) {
   if (window.SharedUtils) return window.SharedUtils.normalizeKey(str);
@@ -2510,11 +2510,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   photoDirZone.addEventListener('click', () => photoDirInput.click());
   photoDirInput.addEventListener('change', async (e) => {
     if (e.target.files.length) {
-      photoFilesArray = Array.from(e.target.files);
+      photoFilesArray = Array.from(e.target.files).filter(file => {
+        const p = (file.webkitRelativePath || file.name || '').replace(/\\/g, '/');
+        return !/(?:^|\/)(result|output|__macosx|\.git)(?:\/|$)/i.test(p);
+      });
       photoDirZone.classList.add('has-file');
-      photoDirInfo.textContent = `已選取資料夾，共包含 ${photoFilesArray.length} 個檔案`;
+      photoDirInfo.textContent = `已選取資料夾，共包含 ${photoFilesArray.length} 個商品圖檔案`;
       photoDirInfo.classList.remove('hidden');
-      logMessage(`已載入照片資料夾，包含 ${photoFilesArray.length} 個檔案`);
+      logMessage(`已載入照片資料夾，共包含 ${photoFilesArray.length} 個有效圖檔`);
       checkReady();
     }
   });
