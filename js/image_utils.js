@@ -17,8 +17,12 @@ window.ImageUtils = {
   
   ensureMinShortEdge: function(img, minEdge = 1000) {
     return new Promise((resolve) => {
-      const w = img.width;
-      const h = img.height;
+      const w = img.width || 0;
+      const h = img.height || 0;
+      if (w <= 0 || h <= 0) {
+        resolve(null);
+        return;
+      }
       const shortEdge = Math.min(w, h);
       
       if (shortEdge >= minEdge) {
@@ -50,8 +54,12 @@ window.ImageUtils = {
 
   resizeAndPad: function(img, targetW = 1000, targetH = 1000, padColor = '#FFFFFF') {
     return new Promise((resolve) => {
-      const w = img.width;
-      const h = img.height;
+      const w = img.width || 0;
+      const h = img.height || 0;
+      if (w <= 0 || h <= 0) {
+        resolve(null);
+        return;
+      }
 
       // Calculate scale ratio to fit within targetW and targetH
       const ratio = Math.min(targetW / w, targetH / h);

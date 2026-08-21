@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>酷澎報價單轉換系統 - 簡化版說明書</title>
+<style>
+/* ==========================================================================
+   Markdown to PDF Theme - Matching Coupang Excel Generator Design System
+   Modern Crimson & Rose Red Theme with Clean White Editorial Aesthetics
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+:root {
+  --primary-color: #e11d48;
+  --primary-dark: #be123c;
+  --primary-light: #fff5f6;
+  --primary-border: #fecdd3;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --bg-page: #ffffff;
+  --bg-subtle: #f8fafc;
+  --bg-dark: #0f172a;
+  --border-color: #e2e8f0;
+  --border-light: #f1f5f9;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-mono: 'Fira Code', Consolas, Monaco, "Courier New", monospace;
+}
+
+/* Page Setup & Generous Margins */
+@page {
+  margin: 24mm 20mm;
+}
+
+html, body {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 48px 56px;
+  margin: 0 auto;
+  max-width: 960px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 2.2em;
+  margin-bottom: 0.8em;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+h1 {
+  font-size: 2.1em;
+  border-bottom: 2.5px solid var(--primary-color);
+  padding-bottom: 0.45em;
+  margin-top: 0.2em;
+  margin-bottom: 1.2em;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1.5em;
+  color: var(--text-primary);
+  border-left: 4.5px solid var(--primary-color);
+  padding-left: 14px;
+  margin-top: 2.4em;
+  margin-bottom: 1em;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 1.25em;
+  color: #1e293b;
+  margin-top: 1.8em;
+  margin-bottom: 0.8em;
+}
+
+h4 {
+  font-size: 1.08em;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-top: 1.4em;
+  margin-bottom: 0.6em;
+}
+
+/* Paragraphs & Text */
+p {
+  margin: 1em 0;
+  color: var(--text-secondary);
+  line-height: 1.85;
+}
+
+strong, b {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+em, i {
+  color: var(--text-secondary);
+}
+
+/* Blockquote & Callouts - Pure White Background with Clean Border & Generous Padding */
+blockquote {
+  margin: 1.6em 0 1.8em;
+  padding: 16px 24px;
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--primary-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.98em;
+  line-height: 1.75;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+blockquote p {
+  margin: 0.4em 0;
+  color: var(--text-secondary);
+}
+
+blockquote strong {
+  color: var(--text-primary);
+}
+
+/* Tables - White Clean Background with Spacious Padding */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.8em 0 2.2em;
+  font-size: 0.93em;
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+thead {
+  background-color: #f8fafc;
+}
+
+th {
+  color: var(--text-primary);
+  font-weight: 700;
+  text-align: left;
+  padding: 14px 18px;
+  border-bottom: 2px solid var(--primary-border);
+  font-size: 0.95em;
+  letter-spacing: 0.01em;
+}
+
+th:not(:last-child), td:not(:last-child) {
+  border-right: 1px solid var(--border-light);
+}
+
+td {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  line-height: 1.65;
+  vertical-align: middle;
+  background-color: #ffffff;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:nth-child(even) td {
+  background-color: #fafbfc;
+}
+
+tbody tr:hover td {
+  background-color: #fff9fa;
+}
+
+/* Inline Code & Badges */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+
+:not(pre) > code {
+  background-color: #f8fafc;
+  color: var(--primary-dark);
+  border: 1px solid var(--border-color);
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Code Blocks & Tree Diagrams */
+pre {
+  background-color: var(--bg-dark);
+  color: #f1f5f9;
+  padding: 18px 24px;
+  border-radius: var(--radius-md);
+  margin: 1.6em 0;
+  overflow-x: auto;
+  line-height: 1.6;
+  border: 1px solid #1e293b;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+pre code {
+  background: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  border: none !important;
+  font-size: 0.9em;
+  white-space: pre;
+}
+
+/* Lists */
+ul, ol {
+  margin: 1em 0;
+  padding-left: 28px;
+  color: var(--text-secondary);
+}
+
+li {
+  margin: 0.5em 0;
+  line-height: 1.8;
+}
+
+li::marker {
+  color: var(--primary-color);
+}
+
+/* Horizontal Rule */
+hr {
+  border: 0;
+  height: 1.5px;
+  background: linear-gradient(to right, var(--primary-border), var(--border-color), transparent);
+  margin: 2.5em 0;
+}
+
+/* Links */
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px dashed var(--primary-border);
+}
+
+a:hover {
+  color: var(--primary-dark);
+  border-bottom-style: solid;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  margin: 1.2em 0;
+}
+
+/* Print & PDF Export Optimization */
+@media print {
+  html, body {
+    padding: 0;
+    max-width: 100%;
+    font-size: 12.5px;
+    background-color: #ffffff !important;
+  }
+
+  h1 {
+    font-size: 1.85em;
+    margin-top: 0;
+  }
+
+  h2 {
+    font-size: 1.35em;
+  }
+
+  h3 {
+    font-size: 1.15em;
+  }
+
+  blockquote {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-left: 4px solid #e11d48 !important;
+    padding: 14px 20px !important;
+  }
+
+  table, pre, blockquote {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  h1, h2, h3, h4 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  pre {
+    background-color: #0f172a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  thead {
+    background-color: #f8fafc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  :not(pre) > code {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+</style>
+</head>
+<body>
+<h1>酷澎報價單轉換系統 - 簡化版說明書</h1>
+<h2>來源 Excel 標準欄位表</h2>
+<blockquote>
+<p>請確保來源 Excel 包含以下標準欄位名稱：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">欄位名稱</th>
+<th style="text-align: left;">填寫範例</th>
+<th style="text-align: left;">用途說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong><code>中文品名</code></strong></td>
+<td style="text-align: left;"><code>品牌名 隱士系列 頂級皮革狗項圈 經典黑 L</code></td>
+<td style="text-align: left;">商品完整名稱</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>*中文背標</code></strong></td>
+<td style="text-align: left;"><code>有</code> 或 <code>背標文字</code></td>
+<td style="text-align: left;"><strong>篩選欄位：有填寫內容才產檔，留空將自動略過</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>EAN</code></strong></td>
+<td style="text-align: left;"><code>8051234567890</code></td>
+<td style="text-align: left;">條碼</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>酷澎進價</code></strong></td>
+<td style="text-align: left;"><code>1200</code></td>
+<td style="text-align: left;">進貨成本</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>台灣訂價</code></strong></td>
+<td style="text-align: left;"><code>2400</code></td>
+<td style="text-align: left;">建議售價</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>Collection</code></strong></td>
+<td style="text-align: left;"><code>HERMITAGE</code></td>
+<td style="text-align: left;">配對<code>圖片資料夾</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>Type</code></strong></td>
+<td style="text-align: left;"><code>COLLAR</code></td>
+<td style="text-align: left;">配對<code>圖片資料夾</code>、<code>報價單</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>中文顏色</code></strong></td>
+<td style="text-align: left;"><code>經典黑</code></td>
+<td style="text-align: left;">配對<code>圖片資料夾</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>Size</code></strong></td>
+<td style="text-align: left;"><code>L</code></td>
+<td style="text-align: left;">配對<code>背標</code></td>
+</tr>
+</tbody>
+</table>
+</blockquote>
+<h3>報價單配對積分制度</h3>
+<p>系統將使用所有報價單的關鍵字評分與該列商品的 <code>[Type]</code> 與 <code>[中文品名]</code> 的關聯度，計算匹配積分並由最高分者勝出：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">評分項目</th>
+<th style="text-align: left;">觸發條件</th>
+<th style="text-align: left;">積分計算公式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong><code>Type</code>欄位完全相符</strong></td>
+<td style="text-align: left;">來源 <code>Type</code> 欄位與模板關鍵字完全一致（不分大小寫）</td>
+<td style="text-align: left;"><strong>1000 + (長度 × 10) 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>欄位單詞吻合</strong></td>
+<td style="text-align: left;">來源 <code>Type</code> 包含該關鍵字單詞（如 <code>COOLING JACKET</code> 對到 <code>JACKET</code>）</td>
+<td style="text-align: left;"><strong>500 + (長度 × 10) 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>中文品名完全相符</strong></td>
+<td style="text-align: left;">商品 <code>中文品名</code> 與模板關鍵字完全一致</td>
+<td style="text-align: left;"><strong>800 + (長度 × 10) 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>中文品名 / 全文包含關鍵字</strong></td>
+<td style="text-align: left;"><code>中文品名</code> 或全文中包含該關鍵字</td>
+<td style="text-align: left;"><strong>100 + (長度 × 10) 分</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>勝出規則</strong>：比較所有報價單模板後，由最高分者勝出；若所有模板積分皆為 0 分，則標記為 <code>UNMATCHED</code>（未分類品項），記錄於統計卡片並自動略過產檔。</li>
+</ul>
+<hr />
+<h3>圖片配對評分制度</h3>
+<p>系統會比對選取的圖片資料夾路徑與內部檔名，計算匹配分數來找出最符合該商品的圖片資料夾：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">評分項目</th>
+<th style="text-align: left;">條件說明</th>
+<th style="text-align: center;">增加積分</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>1. <code>Type</code> 報價單關鍵字匹配</strong></td>
+<td style="text-align: left;">資料夾路徑包含該報價單模板設定的關鍵字</td>
+<td style="text-align: center;"><strong>+30 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>2. 細分 <code>Type</code> 款式匹配</strong></td>
+<td style="text-align: left;">資料夾路徑符合來源 <code>Type</code> 拆解出的款式詞（如 <code>APRON</code>, <code>VEST</code>, <code>TOWEL</code>），用來區分同系列下的不同款式資料夾</td>
+<td style="text-align: center;"><strong>+45 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>3. <code>Collection</code> 系列匹配</strong></td>
+<td style="text-align: left;">資料夾名稱完全吻合來源 <code>Collection</code></td>
+<td style="text-align: center;"><strong>+60 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">資料夾名稱包含來源 <code>Collection</code></td>
+<td style="text-align: center;"><strong>+40 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">資料夾內有任一圖片檔名包含來源 <code>Collection</code>（資料夾未命名系列時的容錯）</td>
+<td style="text-align: center;"><strong>+25 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>4. 顏色匹配加分</strong></td>
+<td style="text-align: left;">資料夾名稱完全吻合來源 <code>中文顏色</code></td>
+<td style="text-align: center;"><strong>+40 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">資料夾內有圖片檔名包含 <code>中文顏色</code></td>
+<td style="text-align: center;"><strong>+30 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">（備用）資料夾名稱包含來源英文 <code>Color</code> 欄位文字</td>
+<td style="text-align: center;"><strong>+35 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>5. 尺寸加分</strong></td>
+<td style="text-align: left;">資料夾內有圖片檔名符合該商品的尺寸（如 S、M、L）</td>
+<td style="text-align: center;"><strong>+15 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>6. 品名關鍵詞加分</strong></td>
+<td style="text-align: left;">資料夾內圖片檔名包含品名拆解後的關鍵詞（2 字以上）</td>
+<td style="text-align: center;"><strong>每個詞 +15 分</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>選取規則</strong>：所有資料夾依總分由高到低排序，最高分者即為該商品的圖片來源資料夾。</li>
+</ul>
+<hr />
+<h3>主圖與情境圖選取評分制度</h3>
+<p>為了避免顏色混淆（例如商品是「紅色」，卻誤抓到「粉紅色」的主圖），系統會計算資料夾內所有圖片的分數，選出最符合的圖片：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">圖檔類型</th>
+<th style="text-align: left;">加分項目與條件</th>
+<th style="text-align: center;">增加積分</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>商品正面主圖</strong></td>
+<td style="text-align: left;">檔名包含 <code>主圖</code> / <code>main</code> / <code>主圖1</code> / <code>main_photo</code></td>
+<td style="text-align: center;"><strong>+100 分</strong>（一般圖片 +30 分）</td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">檔名完全吻合商品 <code>中文顏色</code>（例如紅色不會誤加給粉紅色）</td>
+<td style="text-align: center;"><strong>+50 分</strong>（部分包含 +10 分）</td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">檔名完全吻合商品英文 <code>Color</code> 顏色名稱</td>
+<td style="text-align: center;"><strong>+40 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">檔名包含商品 <code>SKU</code> 或 <code>EAN</code> 條碼</td>
+<td style="text-align: center;"><strong>+80 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">檔名包含商品 <code>Collection</code> 或品名關鍵詞</td>
+<td style="text-align: center;"><strong>+20 分 / 每個詞 +15 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>情境圖 1 / 2</strong></td>
+<td style="text-align: left;">檔名包含 <code>情境圖 1</code> / <code>情境圖1</code> / <code>情境1</code> / <code>scene1</code> / <code>1.jpg</code> 等</td>
+<td style="text-align: center;"><strong>+100 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">檔名包含商品 <code>中文顏色</code> / <code>SKU</code> 條碼</td>
+<td style="text-align: center;"><strong>+30 / +50 分</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>選取規則</strong>：計算各圖檔分數後，由最高分者作為該商品的主圖或情境圖。</li>
+</ul>
+<hr />
+<h3>中文背標配對評分制度</h3>
+<p>背標配對以「尺寸」為基本門檻。<strong>若圖片檔名沒有對到該商品的尺寸，分數直接為 0 分</strong>（避免抓錯其他尺寸的背標）：</p>
+<h4>1. 尺寸評分（基本門檻，未通過則 0 分）</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">尺寸類型</th>
+<th style="text-align: left;">符合條件與檔名範例</th>
+<th style="text-align: center;">基礎分數</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>有具體尺寸</strong><br>(如 <code>M</code>, <code>L</code>, <code>35-1.0</code>, <code>110-1.2</code>)</td>
+<td style="text-align: left;"><strong>標準命名</strong>：檔名如 <code>背標_M.jpg</code>、<code>背標_35-1.0.png</code>、<code>背標-S.jpg</code></td>
+<td style="text-align: center;"><strong>110 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>檔名包含獨立尺寸</strong>：如 <code>_L_</code>、<code>[L]</code>、<code>-L-</code>、<code>L_背標</code>、<code>L.jpg</code>（避免 <code>S</code> 誤判為 <code>XS</code>）</td>
+<td style="text-align: center;"><strong>100 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>包含規格數字</strong>：去除 cm/mm 等符號後的長寬/厚度數字吻合</td>
+<td style="text-align: center;"><strong>90 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>單一尺寸</strong><br>(<code>UNISIZE</code>, <code>單一尺寸</code>, <code>ONE</code>)</td>
+<td style="text-align: left;">檔名包含 <code>單一尺寸</code>、<code>UNISIZE</code>、<code>ONE</code>，或為 <code>背標_ONE</code> / <code>背標_單一尺寸</code></td>
+<td style="text-align: center;"><strong>100 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">檔名只有寫 <code>背標</code> 或 <code>LABEL</code></td>
+<td style="text-align: center;"><strong>80 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>未填寫尺寸商品</strong><br>(Excel 沒填尺寸欄位)</td>
+<td style="text-align: left;">檔名包含 <code>背標</code> 或 <code>LABEL</code>，且<strong>沒有標註其他具體尺寸</strong>（無 S/M/L 或數字規格）</td>
+<td style="text-align: center;"><strong>90 分</strong></td>
+</tr>
+</tbody>
+</table>
+<h4>2. 品名與特徵加分（通過尺寸門檻後累加）</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">加分項目</th>
+<th style="text-align: left;">觸發條件</th>
+<th style="text-align: center;">增加積分</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>中文品名完全吻合</strong></td>
+<td style="text-align: left;">檔名包含該商品的完整中文品名</td>
+<td style="text-align: center;"><strong>+50 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>品名關鍵詞吻合</strong></td>
+<td style="text-align: left;">檔名包含品名拆解後的關鍵詞（如「圍裙」、「附繩款」等）</td>
+<td style="text-align: center;"><strong>每個詞 +25 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>中文顏色吻合</strong></td>
+<td style="text-align: left;">檔名包含商品的 <code>中文顏色</code>（紅色不會誤對到粉紅色）</td>
+<td style="text-align: center;"><strong>+30 分</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>Collection</code> 系列名稱吻合</strong></td>
+<td style="text-align: left;">檔名包含商品的中文或英文 <code>Collection</code></td>
+<td style="text-align: center;"><strong>+20 / +15 分</strong></td>
+</tr>
+</tbody>
+</table>
+<h4>3. 搜尋與合格標準</h4>
+<ul>
+<li><strong>商品資料夾搜尋</strong>：在該商品的圖片資料夾中尋找，分數最高且 <strong>總分 ≥ 90 分</strong> 者採用。</li>
+<li><strong>未找到則留空</strong>：若該商品資料夾內沒有 ≥ 90 分的背標圖檔，依「寧可空白，也不要抓錯」原則<strong>直接保持空白</strong>，避免放錯背標。</li>
+</ul>
+<hr />
+<h2>圖片配對與命名規範</h2>
+<h3>輸出圖片對應與檔名</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">報價單欄位名稱</th>
+<th style="text-align: left;">圖片來源</th>
+<th style="text-align: left;">產出檔名格式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong><code>商品正面(主要圖片）</code></strong></td>
+<td style="text-align: left;">該資料夾下評分最高的主圖</td>
+<td style="text-align: left;"><code>{去除尺寸之中文品名}主圖.jpg</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>商品側拍或情境圖 1(消費者可見圖片）</code></strong></td>
+<td style="text-align: left;">該資料夾下之情境圖 1</td>
+<td style="text-align: left;"><code>1.jpg</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>商品側拍或情境圖 2(消費者可見圖片）</code></strong></td>
+<td style="text-align: left;">該資料夾下之情境圖 2</td>
+<td style="text-align: left;"><code>2.jpg</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>商品詳細說明圖集(消費者可見圖片）</code></strong></td>
+<td style="text-align: left;">該資料夾下之尺寸規格圖</td>
+<td style="text-align: left;"><code>尺寸規格表_{去除尺寸之中文品名}.jpg</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>商品實際中文背標圖(內部上架審核用)</code></strong></td>
+<td style="text-align: left;">該資料夾下評分最高之背標圖</td>
+<td style="text-align: left;"><code>背標_{完整中文品名}_{尺寸}.jpg</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>圖片資料夾命名建議</h3>
+<p><strong>建議資料夾名稱在英文品名（Collection / Type）與「中文顏色」之間保留空格</strong>：</p>
+<ul>
+<li><strong>推薦命名格式</strong>：<code>{COLLECTION} {TYPE} {中文顏色}</code></li>
+<li><strong>範例</strong>：<code>PUFF HARNESS 深藍</code>、<code>BLISS LEASH 紅</code>、<code>BLISS LEASH 粉紅</code>、<code>AALTO PET BATHROBE 黑</code></li>
+<li><strong>注意</strong>：系統也相容無空格命名（如 <code>BLISS LEASH紅</code>），但建議保留空格以利人工辨識。</li>
+<li><strong>階層式資料夾格式（亦支援）</strong>：<code>Photo/{COLLECTION}/{TYPE}/{中文顏色}/</code></li>
+<li>例如：<code>Photo/PUFF/HARNESS/深藍/</code></li>
+<li><strong>資料夾內檔案命名建議</strong>：</li>
+<li><code>主圖.jpg</code>（商品正面圖，系統會自動縮放並補白邊至 1000×1000）</li>
+<li><code>情境圖1.jpg</code>、<code>情境圖2.jpg</code>（情境展示照）</li>
+<li><code>尺寸規格表.jpg</code>（尺寸說明圖）</li>
+<li><code>背標_M.jpg</code>（背標圖，建議檔名標註尺寸）</li>
+</ul>
+<p><strong>📁 建議圖片資料夾結構</strong></p>
+<pre><code class="language-text">圖片/
+├── [Collection] [Type] [中文顏色]       # 命名格式
+├── PUFF HARNESS 深藍                      # 範例
+    ├── 主圖.jpg
+    ├── 情境圖1.jpg
+    ├── 情境圖2.jpg
+    ├── 尺寸規格表.jpg
+    └── 背標_M.jpg
+</code></pre>
+<blockquote>
+<p>💡 審核提示：產出之 Excel 報價單中，若有未配對到圖檔或未填寫的必填欄位，儲存格會自動標註為紅色底色。</p>
+</blockquote>
+</body>
+</html>

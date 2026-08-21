@@ -222,14 +222,16 @@ class CoupangProcessor {
       const tmplType = (bestProfile.template_type || bestProfile.id || 'LEASH').toUpperCase();
       const tmplFile = bestProfile.template_file_name || bestProfile.template_name || (tmplType === 'HARNESS' ? '商品報價單_胸背帶.xlsx' : '商品報價單_項圈 牽繩.xlsx');
       const outputFile = tmplFile.replace(/\.xlsx$/i, '_auto_generate.xlsx');
+      const targetSubfolder = bestProfile.subfolder || bestProfile.name || (tmplType === 'HARNESS' ? '胸背帶' : '項圈 牽繩');
       return {
         template_id: tmplId,
         template_type: tmplType,
         template_file: tmplFile,
         output_file: outputFile,
         category: bestProfile.category_name || (tmplType === 'HARNESS' ? '寵物用品>狗用品>牽繩/胸背帶>胸背帶 (66030)' : '寵物用品>犬貓通用>項圈/伸縮牽繩>項圈 (66025)'),
-        target_subfolder: bestProfile.subfolder || bestProfile.name || (tmplType === 'HARNESS' ? '胸背帶' : '項圈牽繩'),
+        target_subfolder: targetSubfolder,
         matched_rule: bestProfile.name || '',
+        profile: bestProfile,
         unmatched: false
       };
     }
@@ -395,11 +397,6 @@ class CoupangProcessor {
     const typEn = (rawHints.type || '').trim();
     const typeStr = (typZh + ' ' + typEn).toUpperCase();
 
-    // 2. 直通 Excel 的 TYPE：提取細分品類 Token (如 APRON, VEST, TOWEL, POCKET, HANDLE, ROPE, DUMMY, BALL 等)
-    const typeTokensEn = typEn.split(/[\s_+\/\-]+/)
-      .map(t => t.toUpperCase().trim())
-      .filter(t => t.length >= 2 && t !== 'TRAINER' && t !== 'PET' && t !== 'TOY');
-
     // 顏色：優先使用來源 Excel 之「中文顏色」，其次使用中文品名解析出之顏色，並以英文 Color 作為備用
     const colorZh = (rawHints.zhColor || rawHints.colorZh || parsedData.color || '').trim();
     const colorEn = (rawHints.color || rawHints.colorEn || '').trim();
@@ -426,6 +423,22 @@ class CoupangProcessor {
     const targetKeywords = (currentProfile?.keywords || [currentProfile?.name || ''])
       .map(k => (k || '').toString().toUpperCase().trim())
       .filter(Boolean);
+
+    // 2. 直通 Excel 的 TYPE：提取細分品類 Token (動態排除品牌、系列、大品類關鍵字，100% 跨廠商通用無硬編碼)
+    const excludeTokens = new Set();
+    if (brandName) {
+      brandName.toUpperCase().split(/[\s_+\/\-]+/).forEach(t => { if (t.length >= 2) excludeTokens.add(t); });
+    }
+    for (const c of collectionCandidates) {
+      if (c) c.toUpperCase().split(/[\s_+\/\-]+/).forEach(t => { if (t.length >= 2) excludeTokens.add(t); });
+    }
+    for (const kw of targetKeywords) {
+      if (kw) kw.toUpperCase().split(/[\s_+\/\-]+/).forEach(t => { if (t.length >= 2) excludeTokens.add(t); });
+    }
+
+    const typeTokensEn = typEn.split(/[\s_+\/\-]+/)
+      .map(t => t.toUpperCase().trim())
+      .filter(t => t.length >= 2 && !excludeTokens.has(t));
 
     const otherProfileKeywords = [];
     for (const p of profiles) {
@@ -636,27 +649,7 @@ class CoupangProcessor {
       }
     }
 
-    // 2. 背標單一明確回退 (Fallback 1)：若當前資料夾無背標，支援在「背標/LABEL」獨立資料夾中尋找
-    if (!label) {
-      let bestGlobalScore = 0;
-      for (const [dPath, files] of this.folderMap.entries()) {
-        const dPathU = dPath.toUpperCase();
-        if (dPathU.includes('背標') || dPathU.includes('LABEL') || dPathU.includes('BACK_LABEL')) {
-          const isCollMatch = (collZh && dPathU.includes(collZh.toUpperCase())) || (collEn && dPathU.includes(collEn.toUpperCase()));
-          for (const f of files) {
-            if (!isImgFile(f.name)) continue;
-            let fScore = this.calculateBackLabelScore(f.name, normTargetSize, zhKeywords, colorZh, collZh, collEn, prodZhName);
-            if (isCollMatch && fScore > 0) fScore += 20;
-            if (fScore > bestGlobalScore && fScore >= 90) {
-              bestGlobalScore = fScore;
-              label = f;
-            }
-          }
-        }
-      }
-    }
-
-    // 3. 尺寸圖單一明確回退 (Fallback 1)：若當前顏色資料夾無尺寸圖，向上層/同系列資料夾尋找
+    // 2. 尺寸圖單一明確回退 (Fallback 1)：若當前顏色資料夾無尺寸圖，向上層/同系列資料夾尋找
     if (!chart && matchedFolder) {
       const lastSlashIdx = matchedFolder.lastIndexOf('/');
       const parentPath = lastSlashIdx !== -1 ? matchedFolder.substring(0, lastSlashIdx) : '';

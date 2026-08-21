@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.12.5';
+const APP_VERSION = 'v2.14.0';
 
 function normalizeHeaderKey(str) {
   if (window.SharedUtils) return window.SharedUtils.normalizeKey(str);
@@ -467,8 +467,8 @@ function detectRequiredTemplates(ws, headerRow, rowStart, maxRow, profiles, sour
     }
   }
   const typeColIdx = (sourceConfig?.type_column ? findHeaderColIdx(headerMap, sourceConfig.type_column) : null) || findHeaderColIdx(headerMap, 'TYPE') || findHeaderColIdx(headerMap, '種類') || findHeaderColIdx(headerMap, '品類') || findHeaderColIdx(headerMap, 'Type');
-  const filterColName = sourceConfig?.filter_column || '中文背標';
-  const filterColIdx = findHeaderColIdx(headerMap, filterColName);
+  const filterColName = (sourceConfig?.filter_column !== undefined) ? sourceConfig.filter_column : '中文背標';
+  const filterColIdx = (filterColName && filterColName.trim() !== '') ? findHeaderColIdx(headerMap, filterColName) : null;
 
   const matchedProfileIds = new Set();
   const unmatchedItems = [];
@@ -614,16 +614,18 @@ function checkMissingColumns(detectedProfiles, ws, headerRow, sourceConfig) {
   const missingMap = new Map();
 
   // 1. Check filter column
-  const filterCol = sourceConfig?.filter_column || '中文背標';
-  const filterIdx = findHeaderColIdx(headerMap, filterCol);
-  if (!filterIdx) {
-    missingMap.set('__FILTER_COL__', {
-      key: '__FILTER_COL__',
-      targetField: `篩選欄位（當前設定: ${filterCol}）`,
-      expectedSourceCol: filterCol,
-      profiles: detectedProfiles,
-      isFilter: true
-    });
+  const filterCol = (sourceConfig?.filter_column !== undefined) ? sourceConfig.filter_column : '中文背標';
+  if (filterCol && filterCol.trim() !== '') {
+    const filterIdx = findHeaderColIdx(headerMap, filterCol);
+    if (!filterIdx) {
+      missingMap.set('__FILTER_COL__', {
+        key: '__FILTER_COL__',
+        targetField: `篩選欄位（當前設定: ${filterCol}）`,
+        expectedSourceCol: filterCol,
+        profiles: detectedProfiles,
+        isFilter: true
+      });
+    }
   }
 
   // 2. Check dynamic fields in detected profiles
@@ -831,7 +833,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           templateProfiles = stored;
         }
 
-        // Auto-migrate stored profiles to ensure baseline fixed keys (法定種類) exist
+        // Auto-migrate stored profiles to ensure baseline fixed keys and updated shared subfolders exist
         for (const p of templateProfiles) {
           if (!p.field_mappings) p.field_mappings = { fixed: {}, dynamic: {} };
           if (!p.field_mappings.fixed) p.field_mappings.fixed = {};
@@ -839,6 +841,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (!p.field_mappings.fixed['法定種類'] || p.field_mappings.fixed['法定種類'] === '') {
             p.field_mappings.fixed['法定種類'] = 'TW_General';
             modified = true;
+          }
+          if (p.is_builtin) {
+            if ((p.id === 'COLLAR' || p.id === 'LEASH') && (p.subfolder === '項圈' || p.subfolder === '牽繩' || !p.subfolder)) {
+              p.subfolder = '項圈 牽繩';
+              modified = true;
+            } else if ((p.id === 'TOY' || p.id === 'BALL') && (p.subfolder === '玩具及訓練工具' || p.subfolder === '玩具球' || !p.subfolder)) {
+              p.subfolder = '生活與訓練配件';
+              modified = true;
+            }
           }
           if (modified) {
             await window.StorageUtils.saveProfile(p);
@@ -1346,18 +1357,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (k) fixed[k] = v;
     });
 
+    const getVal = (id) => {
+      const el = document.getElementById(id);
+      return el ? el.value.trim() : '';
+    };
+
     return {
       file_path: "商品資料.xlsx",
-      sheet_name: document.getElementById('cfg_sheet_name')?.value.trim() || 'Sheet1',
-      header_row: parseInt(document.getElementById('cfg_header_row')?.value) || 3,
-      row_start: parseInt(document.getElementById('cfg_row_start')?.value) || 4,
-      filter_column: document.getElementById('cfg_filter_column')?.value.trim() || '中文背標',
+      sheet_name: getVal('cfg_sheet_name') || 'Sheet1',
+      header_row: Math.max(1, parseInt(document.getElementById('cfg_header_row')?.value) || 3),
+      row_start: Math.max(2, parseInt(document.getElementById('cfg_row_start')?.value) || 4),
+      filter_column: getVal('cfg_filter_column'),
       brand_fixed: document.getElementById('cfg_brand_fixed')?.value.trim() || '',
       manufacturer_fixed: document.getElementById('cfg_manufacturer_fixed')?.value.trim() || '',
-      collection_column: document.getElementById('cfg_collection_column')?.value.trim() || 'COLLECTION',
-      type_column: document.getElementById('cfg_type_column')?.value.trim() || 'TYPE',
-      color_column: document.getElementById('cfg_color_column')?.value.trim() || '中文顏色',
-      size_column: document.getElementById('cfg_size_column')?.value.trim() || 'SIZE',
+      collection_column: getVal('cfg_collection_column'),
+      type_column: getVal('cfg_type_column'),
+      color_column: getVal('cfg_color_column'),
+      size_column: getVal('cfg_size_column'),
       fixed: fixed
     };
   }
@@ -2080,9 +2096,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       function onNext() {
         const selectedSheetName = wizardSheetSelect ? wizardSheetSelect.value : defaultSheetName;
-        const selectedHeaderRow = parseInt(wizardHeaderRow?.value) || 3;
-        const selectedRowStart = parseInt(wizardRowStart?.value) || 4;
-        const selectedFilterCol = wizardFilterColumn ? wizardFilterColumn.value.trim() : '中文背標';
+        const selectedHeaderRow = Math.max(1, parseInt(wizardHeaderRow?.value) || 3);
+        const selectedRowStart = Math.max(selectedHeaderRow + 1, parseInt(wizardRowStart?.value) || (selectedHeaderRow + 1));
+        const selectedFilterCol = wizardFilterColumn ? wizardFilterColumn.value.trim() : '';
 
         const ws = wb.sheet(selectedSheetName);
         if (!ws || !ws.usedRange()) {
@@ -2093,6 +2109,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const totalR = ws.usedRange().endCell().rowNumber();
         if (selectedHeaderRow >= totalR) {
           alert(`標題列設定為第 ${selectedHeaderRow} 列，已超出或等於工作表總列數 (${totalR} 列)，請確認標題列位置！`);
+          return;
+        }
+        if (selectedRowStart > totalR) {
+          alert(`資料起始列設定為第 ${selectedRowStart} 列，已超出工作表總列數 (${totalR} 列)，請確認起始列位置！`);
           return;
         }
 
@@ -2136,11 +2156,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           selEl.appendChild(emptyOpt);
 
           let hasSelected = false;
+          const directMatchHeader = currentVal ? excelHeaderNames.find(h => h.toUpperCase() === currentVal.toUpperCase()) : null;
+          const fallbackMatchHeader = !directMatchHeader ? excelHeaderNames.find(h => fallbackKeys.some(k => k.toUpperCase() === h.toUpperCase())) : null;
+
           excelHeaderNames.forEach(h => {
             const opt = document.createElement('option');
             opt.value = h;
-            const isDirect = (currentVal && h.toUpperCase() === currentVal.toUpperCase());
-            const isFallback = (!currentVal && fallbackKeys.some(k => k.toUpperCase() === h.toUpperCase()));
+            const isDirect = directMatchHeader && (h.toUpperCase() === directMatchHeader.toUpperCase());
+            const isFallback = !directMatchHeader && fallbackMatchHeader && (h.toUpperCase() === fallbackMatchHeader.toUpperCase());
             if (isDirect || isFallback) {
               opt.textContent = `${h} (推薦比對)`;
               if (!hasSelected) {
@@ -2203,7 +2226,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 select.appendChild(opt);
               });
 
-              if (!item.isFilter) {
+              const isMandatoryName = (item.key === '商品名稱' || item.key === '中文品名');
+
+              if (!item.isFilter && !isMandatoryName) {
                 const skipOpt = document.createElement('option');
                 skipOpt.value = '__SKIP__';
                 skipOpt.textContent = '【留空 / 略過此欄位】';
@@ -2212,6 +2237,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const fixedOpt = document.createElement('option');
                 fixedOpt.value = '__FIXED__';
                 fixedOpt.textContent = '【手動輸入固定值...】';
+                select.appendChild(fixedOpt);
+              } else if (isMandatoryName) {
+                const fixedOpt = document.createElement('option');
+                fixedOpt.value = '__FIXED__';
+                fixedOpt.textContent = '【手動指定固定品名...】';
                 select.appendChild(fixedOpt);
               }
 
@@ -2316,10 +2346,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           filter_column: currentStep2Data.selectedFilterCol,
           brand_fixed: wizardBrandFixed ? wizardBrandFixed.value.trim() : '',
           manufacturer_fixed: wizardManufacturerFixed ? wizardManufacturerFixed.value.trim() : '',
-          collection_column: wizardCollectionColumn ? wizardCollectionColumn.value.trim() : 'COLLECTION',
-          type_column: wizardTypeColumn ? wizardTypeColumn.value.trim() : 'TYPE',
-          color_column: wizardColorColumn ? wizardColorColumn.value.trim() : '中文顏色',
-          size_column: wizardSizeColumn ? wizardSizeColumn.value.trim() : 'SIZE',
+          collection_column: wizardCollectionColumn ? wizardCollectionColumn.value.trim() : '',
+          type_column: wizardTypeColumn ? wizardTypeColumn.value.trim() : '',
+          color_column: wizardColorColumn ? wizardColorColumn.value.trim() : '',
+          size_column: wizardSizeColumn ? wizardSizeColumn.value.trim() : '',
           mappings,
           remember,
           detectedProfiles: currentStep2Data.detectedProfiles,
@@ -2498,20 +2528,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function getValidRowsInfo(ws, customStart = null, customEnd = null) {
-    if (!ws) return { validRows: [], totalDataRows: 0, startRow: 0, endRow: 0 };
-    const headerRow = currentSourceConfig?.header_row || 3;
-    const defaultStartRow = currentSourceConfig?.row_start || 4;
-    const filterColName = currentSourceConfig?.filter_column || '中文背標';
+    if (!ws) return { validRows: [], totalDataRows: 0, startRow: 0, endRow: 0, isRangeInvalid: false };
+    const headerRow = (currentSourceConfig?.header_row !== undefined) ? currentSourceConfig.header_row : 3;
+    const defaultStartRow = (currentSourceConfig?.row_start !== undefined) ? currentSourceConfig.row_start : 4;
+    const filterColName = currentSourceConfig?.filter_column;
     
     const range = ws.usedRange();
-    if (!range) return { validRows: [], totalDataRows: 0, startRow: 0, endRow: 0 };
+    if (!range) return { validRows: [], totalDataRows: 0, startRow: 0, endRow: 0, isRangeInvalid: false };
     const maxRow = range.endCell().rowNumber();
 
-    const headers = buildHeaderMap(ws, headerRow);
-    const filterColIdx = findHeaderColIdx(headers, filterColName);
+    const parsedStart = parseInt(customStart);
+    const parsedEnd = parseInt(customEnd);
 
-    const actualStart = Math.max(headerRow + 1, parseInt(customStart) || defaultStartRow);
-    const actualEnd = customEnd ? Math.min(maxRow, parseInt(customEnd)) : maxRow;
+    const actualStart = Math.max(headerRow + 1, !isNaN(parsedStart) ? parsedStart : defaultStartRow);
+    const actualEnd = (!isNaN(parsedEnd) && parsedEnd > 0) ? Math.min(maxRow, parsedEnd) : maxRow;
+
+    if (actualStart > actualEnd) {
+      return { validRows: [], totalDataRows: 0, startRow: actualStart, endRow: actualEnd, maxRow, isRangeInvalid: true };
+    }
+
+    const headers = buildHeaderMap(ws, headerRow);
+    const filterColIdx = (filterColName && filterColName.trim() !== '') ? findHeaderColIdx(headers, filterColName) : null;
 
     const validRows = [];
     let totalDataRows = 0;
@@ -2529,14 +2566,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       validRows.push(r);
     }
 
-    return { validRows, totalDataRows, startRow: actualStart, endRow: actualEnd, maxRow };
+    return { validRows, totalDataRows, startRow: actualStart, endRow: actualEnd, maxRow, isRangeInvalid: false };
   }
 
   function calculateValidProducts(ws) {
     const sStart = inputRowStart ? inputRowStart.value : null;
     const sEnd = inputRowEnd ? inputRowEnd.value : null;
     const info = getValidRowsInfo(ws, sStart, sEnd);
-    return { count: info.validRows.length, rows: info.validRows, totalDataRows: info.totalDataRows, maxRow: info.maxRow };
+    return { count: info.validRows.length, rows: info.validRows, totalDataRows: info.totalDataRows, maxRow: info.maxRow, isRangeInvalid: info.isRangeInvalid };
   }
 
   function updateRangeHintUI() {
@@ -2555,6 +2592,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sStart = inputRowStart ? inputRowStart.value : null;
     const sEnd = inputRowEnd ? inputRowEnd.value : null;
     const info = getValidRowsInfo(ws, sStart, sEnd);
+
+    if (info.isRangeInvalid) {
+      rangeInfoHint.textContent = `[錯誤] 起始列 (第 ${info.startRow} 列) 不得大於結束列 (第 ${info.endRow} 列)！`;
+      rangeInfoHint.className = 'range-hint warning';
+      return;
+    }
+
     rangeInfoHint.textContent = `掃描範圍: 第 ${info.startRow} ~ ${info.endRow} 列（總共 ${info.totalDataRows} 列，符合背標條件之有效商品: ${info.validRows.length} 筆）`;
     rangeInfoHint.className = 'range-hint success';
   }
@@ -2726,10 +2770,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       const ws = getSourceSheet(wb);
       if (!ws) throw new Error('來源 Excel 中找不到任何可用的工作表！');
 
-      const headerRow = currentSourceConfig.header_row || 3;
+      const headerRow = (currentSourceConfig?.header_row !== undefined) ? currentSourceConfig.header_row : 3;
       const rowStartInput = inputRowStart ? inputRowStart.value : null;
       const rowEndInput = inputRowEnd ? inputRowEnd.value : null;
       const rangeInfo = getValidRowsInfo(ws, rowStartInput, rowEndInput);
+
+      if (rangeInfo.isRangeInvalid) {
+        alert(`處理範圍設定有誤：起始列 (第 ${rangeInfo.startRow} 列) 不得大於結束列 (第 ${rangeInfo.endRow} 列)！請修正後再試。`);
+        setProgress(0, '處理範圍設定有誤');
+        return;
+      }
+
       const validRowIndices = rangeInfo.validRows;
       const rowStart = rangeInfo.startRow;
       const rowEnd = rangeInfo.endRow;
@@ -2753,8 +2804,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
 
-      const filterColName = currentSourceConfig.filter_column || '中文背標';
-      const filterColIdx = findHeaderColIdx(headers, filterColName);
+      const filterColName = (currentSourceConfig?.filter_column !== undefined) ? currentSourceConfig.filter_column : '中文背標';
+      const filterColIdx = (filterColName && filterColName.trim() !== '') ? findHeaderColIdx(headers, filterColName) : null;
 
       if (!nameColIdx) {
         throw new Error(`來源 Excel 表頭（第 ${headerRow} 列）缺少「商品名稱」或「中文品名」必要欄位！請在對照表設定或上傳時指定品名欄位。`);
@@ -2774,17 +2825,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         templateProfiles
       );
 
-      // Map to hold loaded Template Workbooks: Map<profileId, { wb, ws, headerMap, nextRowIdx, profile, targetSubfolder, fileName }>
+      // Map to hold loaded Template Workbooks: Map<templateKey, { wb, ws, headerMap, nextRowIdx, profile, targetSubfolder, fileName, count }>
       const activeWorkbooks = new Map();
 
-      async function getOrInitWorkbook(profileId, categoryHint, subfolderHint) {
-        if (activeWorkbooks.has(profileId)) {
-          return activeWorkbooks.get(profileId);
+      async function getOrInitWorkbook(profileOrId, categoryHint, subfolderHint) {
+        if (!Array.isArray(templateProfiles) || templateProfiles.length === 0) {
+          templateProfiles = window.AppConfig.getDefaultProfiles();
         }
 
-        let profile = templateProfiles.find(p => p.id === profileId || p.template_type === profileId);
+        let profile = null;
+        if (profileOrId && typeof profileOrId === 'object' && profileOrId.name) {
+          profile = profileOrId;
+        } else if (typeof profileOrId === 'string') {
+          profile = templateProfiles.find(p => p.id === profileOrId || p.template_type === profileOrId);
+        }
         if (!profile) {
-          profile = templateProfiles.find(p => p.id === 'LEASH') || templateProfiles[0];
+          profile = templateProfiles.find(p => p.id === 'LEASH') || templateProfiles[0] || window.AppConfig.getDefaultProfiles()[0];
+        }
+
+        const targetSubfolder = subfolderHint || profile.subfolder || profile.name || '未分類品項';
+        const templateFileName = profile.template_file_name || (profile.id === 'HARNESS' ? '商品報價單_胸背帶.xlsx' : '商品報價單_項圈 牽繩.xlsx');
+        const templateKey = `${targetSubfolder}:::${templateFileName}`;
+
+        if (activeWorkbooks.has(templateKey)) {
+          return activeWorkbooks.get(templateKey);
         }
 
         let b64 = null;
@@ -2797,6 +2861,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!b64 && profile.template_type) {
           b64 = await window.StorageUtils.getTemplateData(profile.template_type);
         }
+        // Safe fallback: if custom template binary is missing, fall back to built-in template
+        if (!b64) {
+          b64 = window.CoupangTemplates?.[profile.template_type] || window.CoupangTemplates?.[profile.id] || window.CoupangTemplates?.HARNESS || window.CoupangTemplates?.LEASH;
+        }
 
         let wbInstance = null;
         let wsInstance = null;
@@ -2805,15 +2873,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           wsInstance = wbInstance.sheets().find(s => s.name().startsWith('QF_')) || wbInstance.sheet(0);
         } else {
           wbInstance = await XlsxPopulate.fromBlankAsync();
-          wsInstance = wbInstance.sheet(0).name(`QF_${profile.name || 'Output'}`);
+          wsInstance = wbInstance.sheet(0).name(`QF_${targetSubfolder || profile.name || 'Output'}`);
         }
 
         const hMap = buildHeaderMap(wsInstance, 5);
-        const targetSubfolder = subfolderHint || profile.subfolder || profile.name || '未分類品項';
-        const fileName = (profile.template_file_name || `${profile.name}.xlsx`).replace(/\.xlsx$/i, '_auto_generate.xlsx');
+        const fileName = templateFileName.replace(/\.xlsx$/i, '_auto_generate.xlsx');
 
         const item = {
-          profileId: profile.id,
+          templateKey: templateKey,
           profile: profile,
           wb: wbInstance,
           ws: wsInstance,
@@ -2824,7 +2891,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           count: 0
         };
 
-        activeWorkbooks.set(profileId, item);
+        activeWorkbooks.set(templateKey, item);
         return item;
       }
 
@@ -2956,9 +3023,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let imgs = processor.getLocalImagesForProduct(parsed, rawHints);
 
-        const wbItem = await getOrInitWorkbook(targetInfo.template_id, targetInfo.category, targetInfo.target_subfolder);
+        const currentProfile = targetInfo.profile || templateProfiles.find(p => p.id === targetInfo.template_id) || templateProfiles[0];
+        const wbItem = await getOrInitWorkbook(currentProfile, targetInfo.category, targetInfo.target_subfolder);
         wbItem.count++;
-        typeCounts[wbItem.profile.name] = (typeCounts[wbItem.profile.name] || 0) + 1;
+        typeCounts[currentProfile.name] = (typeCounts[currentProfile.name] || 0) + 1;
 
         const targetSubFolder = wbItem.targetSubfolder;
         if (!filesToExport[targetSubFolder]) {
@@ -3065,7 +3133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const targetWs = wbItem.ws;
         const targetRowIdx = wbItem.nextRowIdx++;
         const tmplMap = wbItem.headerMap;
-        const profileMappings = wbItem.profile.field_mappings || {};
+        const profileMappings = currentProfile.field_mappings || {};
 
         const getSourceHeaderIdx = (colName) => findHeaderColIdx(headers, colName);
 
@@ -3087,7 +3155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         // Write category
-        const catValue = targetInfo.category || wbItem.profile.category_name || '';
+        const catValue = targetInfo.category || currentProfile.category_name || '';
         setVal('細分商品種類', catValue);
 
         // 1. Write Global Fixed mappings from currentSourceConfig
@@ -3188,7 +3256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Generate binary buffers for all active workbooks
       setProgress(95, '正在壓縮並修正 Excel 格式...');
-      for (const [profId, item] of activeWorkbooks.entries()) {
+      for (const [tmplKey, item] of activeWorkbooks.entries()) {
         if (item.count > 0) {
           highlightMissingRequiredCells(item.ws, 9, item.nextRowIdx, 6);
           let buf = await item.wb.outputAsync();

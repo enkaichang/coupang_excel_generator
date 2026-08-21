@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>酷澎報價單與圖片批量生成系統 v2.12.5</title>
+  <title>酷澎報價單轉換系統 v2.14.0</title>
   <!-- Google Fonts: Noto Sans TC & Material Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=download" />
   <link rel="stylesheet" href="style.css">
   
   <!-- XlsxPopulate for reading/writing Excel while preserving all metadata/styles -->
@@ -32,13 +33,15 @@
         <div>
           <div style="display: flex; align-items: center; gap: 10px;">
             <h1>酷澎報價單與圖片生成系統</h1>
-            <span class="version-badge">v2.12.5</span>
+            <span class="version-badge">v2.14.0</span>
           </div>
           <p class="subtitle">讀取來源 Excel 與商品圖庫，自動產生多模板標準報價單及處理後圖片</p>
         </div>
       </div>
       <div class="header-actions">
-        <button id="btnDownloadSample" class="btn btn-secondary btn-icon" title="下載範例資料夾結構"><span class="material-icons">download</span></button>
+        <button id="btnDownloadSample" class="btn btn-secondary btn-icon" title="下載範例資料夾結構"><span class="material-symbols-outlined">
+download
+</span></button>
         <button id="btnOpenConfig" class="btn btn-outline btn-icon" title="對照表設定"><span class="material-icons">tune</span></button>
       </div>
     </header>
@@ -88,7 +91,7 @@
 
         <!-- 執行操作區 -->
         <div class="action-panel">
-          <button id="btnStartProcess" class="btn btn-primary btn-large btn-icon" disabled title="開始處理"><span class="material-icons">play_arrow</span></button>
+          <button id="btnStartProcess" class="btn btn-primary btn-large btn-icon" disabled title="開始處理"><span class="material-icons">auto_awesome</span></button>
         </div>
       </section>
 
@@ -131,7 +134,9 @@
 
         <div class="result-actions">
           <button id="btnSaveToFolder" class="btn btn-primary btn-icon" disabled title="一鍵存入資料夾 (推薦)"><span class="material-icons">folder_open</span></button>
-          <button id="btnDownloadZip" class="btn btn-secondary btn-icon" disabled title="打包下載 ZIP (.zip)"><span class="material-icons">download</span></button>
+          <button id="btnDownloadZip" class="btn btn-secondary btn-icon" disabled title="打包下載 ZIP (.zip)"><span class="material-symbols-outlined">
+download
+</span></button>
         </div>
 
         <div class="log-panel">
@@ -144,7 +149,7 @@
     </main>
 
     <footer class="app-footer">
-      <p>Powered By Enkai Chang</p>
+      <p>酷澎報價單轉換系統 © Powered by Enkai Chang</p>
     </footer>
 
     <!-- Modal: 對照表與多模板設定檔編輯器 -->
@@ -193,7 +198,9 @@
 
         <div class="modal-actions modal-actions-split">
           <div class="actions-left">
-            <button id="btnExportConfigPackage" class="btn btn-outline btn-sm btn-icon" title="匯出備份 (JSON)"><span class="material-icons">download</span></button>
+            <button id="btnExportConfigPackage" class="btn btn-outline btn-sm btn-icon" title="匯出備份 (JSON)"><span class="material-symbols-outlined">
+download
+</span></button>
             <button id="btnImportConfigPackage" class="btn btn-outline btn-sm btn-icon" title="從 JSON 檔案還原設定檔與模板"><span class="material-icons">upload</span></button>
             <input type="file" id="importConfigFileInput" accept=".json" hidden>
           </div>

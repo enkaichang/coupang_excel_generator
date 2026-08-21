@@ -88,7 +88,7 @@ const AppConfig = {
         template_type: 'LEASH',
         template_file_name: '商品報價單_項圈 牽繩.xlsx',
         category_name: '寵物用品>犬貓通用>項圈/伸縮牽繩>項圈 (66025)',
-        subfolder: '項圈',
+        subfolder: '項圈 牽繩',
         is_builtin: true,
         field_mappings: {
           dynamic: { ...baseline.dynamic },
@@ -102,7 +102,7 @@ const AppConfig = {
         template_type: 'LEASH',
         template_file_name: '商品報價單_項圈 牽繩.xlsx',
         category_name: '寵物用品>犬貓通用>項圈/伸縮牽繩>牽繩 (66027)',
-        subfolder: '牽繩',
+        subfolder: '項圈 牽繩',
         is_builtin: true,
         field_mappings: {
           dynamic: { ...baseline.dynamic },
@@ -116,7 +116,7 @@ const AppConfig = {
         template_type: 'ACCESSORIES',
         template_file_name: '商品報價單_生活與訓練配件.xlsx',
         category_name: '寵物用品>犬用玩具>咬咬/拉扯玩具 (66040)',
-        subfolder: '玩具及訓練工具',
+        subfolder: '生活與訓練配件',
         is_builtin: true,
         field_mappings: {
           dynamic: { ...baseline.dynamic },
@@ -130,7 +130,7 @@ const AppConfig = {
         template_type: 'ACCESSORIES',
         template_file_name: '商品報價單_生活與訓練配件.xlsx',
         category_name: '寵物用品>犬用玩具>球類玩具 (66041)',
-        subfolder: '玩具球',
+        subfolder: '生活與訓練配件',
         is_builtin: true,
         field_mappings: {
           dynamic: { ...baseline.dynamic },
@@ -201,9 +201,4 @@ const AppConfig = {
   }
 };
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = AppConfig;
-}
-if (typeof window !== 'undefined') {
-  window.AppConfig = AppConfig;
-}
+window.AppConfig = AppConfig;
