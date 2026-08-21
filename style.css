@@ -324,13 +324,15 @@ h1 {
   border-radius: var(--radius-sm);
 }
 
-.btn-icon .material-icons {
+.btn-icon .material-icons,
+.btn-icon .material-symbols-outlined {
   font-size: 1.25rem;
   line-height: 1;
   margin: 0 !important;
 }
 
-.btn-icon.btn-sm .material-icons {
+.btn-icon.btn-sm .material-icons,
+.btn-icon.btn-sm .material-symbols-outlined {
   font-size: 1.1rem;
 }
 
@@ -347,7 +349,8 @@ h1 {
   padding: 0;
 }
 
-.btn-large.btn-icon .material-icons {
+.btn-large.btn-icon .material-icons,
+.btn-large.btn-icon .material-symbols-outlined {
   font-size: 1.8rem;
 }
 
@@ -841,7 +844,8 @@ h1 {
   padding: 0;
 }
 
-.modal-close .material-icons {
+.modal-close .material-icons,
+.modal-close .material-symbols-outlined {
   font-size: 1.25rem;
   line-height: 1;
 }
@@ -1569,7 +1573,8 @@ h1 {
 .wizard-group-header.wizard-group-new:hover {
   background: #fef3c7;
 }
-.wizard-group-new .wizard-group-title .material-icons {
+.wizard-group-new .wizard-group-title .material-icons,
+.wizard-group-new .wizard-group-title .material-symbols-outlined {
   color: #d97706;
 }
 
@@ -1580,7 +1585,8 @@ h1 {
 .wizard-group-header.wizard-group-inherited:hover {
   background: #dcfce7;
 }
-.wizard-group-inherited .wizard-group-title .material-icons {
+.wizard-group-inherited .wizard-group-title .material-icons,
+.wizard-group-inherited .wizard-group-title .material-symbols-outlined {
   color: #15803d;
 }
 
@@ -1591,7 +1597,8 @@ h1 {
 .wizard-group-header.wizard-group-system:hover {
   background: #ffe4e6;
 }
-.wizard-group-system .wizard-group-title .material-icons {
+.wizard-group-system .wizard-group-title .material-icons,
+.wizard-group-system .wizard-group-title .material-symbols-outlined {
   color: #be123c;
 }
 
@@ -1616,12 +1623,14 @@ h1 {
   color: #1e293b;
 }
 
-.wizard-toggle-btn .material-icons {
+.wizard-toggle-btn .material-icons,
+.wizard-toggle-btn .material-symbols-outlined {
   font-size: 1.1rem;
   transition: transform 0.2s ease;
 }
 
-.wizard-toggle-btn.expanded .material-icons {
+.wizard-toggle-btn.expanded .material-icons,
+.wizard-toggle-btn.expanded .material-symbols-outlined {
   transform: rotate(180deg);
 }
 
@@ -1763,12 +1772,14 @@ h1 {
   color: #1e293b;
 }
 
-.unmatched-toggle-btn .material-icons {
+.unmatched-toggle-btn .material-icons,
+.unmatched-toggle-btn .material-symbols-outlined {
   font-size: 1.1rem;
   transition: transform 0.2s ease;
 }
 
-.unmatched-toggle-btn.expanded .material-icons {
+.unmatched-toggle-btn.expanded .material-icons,
+.unmatched-toggle-btn.expanded .material-symbols-outlined {
   transform: rotate(180deg);
 }
 
@@ -2263,9 +2274,26 @@ h1 {
   outline: none;
 }
 
-/* Material Icons Helper */
+/* Material Icons & Material Symbols Helper */
 .material-icons {
   font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 1.1rem;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  vertical-align: middle;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
   font-weight: normal;
   font-style: normal;
   font-size: 1.1rem;
@@ -2370,7 +2398,8 @@ h1 {
   border-color: #fda4af;
 }
 
-.keyword-tag-pill .material-icons {
+.keyword-tag-pill .material-icons,
+.keyword-tag-pill .material-symbols-outlined {
   font-size: 0.9rem;
   color: #e11d48;
 }
@@ -2396,7 +2425,8 @@ h1 {
   color: #ef4444;
 }
 
-.keyword-tag-remove .material-icons {
+.keyword-tag-remove .material-icons,
+.keyword-tag-remove .material-symbols-outlined {
   font-size: 0.85rem;
   color: inherit;
 }

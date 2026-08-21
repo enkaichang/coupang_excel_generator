@@ -5,7 +5,7 @@ const AppConfig = {
       sheet_name: "Sheet1",
       header_row: 3,
       row_start: 4,
-      filter_column: "中文背標",
+      filter_column: "",
       brand_fixed: "",
       manufacturer_fixed: "",
       collection_column: "COLLECTION",
@@ -74,7 +74,6 @@ const AppConfig = {
         template_type: 'HARNESS',
         template_file_name: '商品報價單_胸背帶.xlsx',
         category_name: '寵物用品>狗用品>牽繩/胸背帶>胸背帶 (66030)',
-        subfolder: '胸背帶',
         is_builtin: true,
         field_mappings: {
           dynamic: { ...baseline.dynamic },
@@ -88,7 +87,6 @@ const AppConfig = {
         template_type: 'LEASH',
         template_file_name: '商品報價單_項圈 牽繩.xlsx',
         category_name: '寵物用品>犬貓通用>項圈/伸縮牽繩>項圈 (66025)',
-        subfolder: '項圈 牽繩',
         is_builtin: true,
         field_mappings: {
           dynamic: { ...baseline.dynamic },
@@ -102,7 +100,6 @@ const AppConfig = {
         template_type: 'LEASH',
         template_file_name: '商品報價單_項圈 牽繩.xlsx',
         category_name: '寵物用品>犬貓通用>項圈/伸縮牽繩>牽繩 (66027)',
-        subfolder: '項圈 牽繩',
         is_builtin: true,
         field_mappings: {
           dynamic: { ...baseline.dynamic },
@@ -116,7 +113,6 @@ const AppConfig = {
         template_type: 'ACCESSORIES',
         template_file_name: '商品報價單_生活與訓練配件.xlsx',
         category_name: '寵物用品>犬用玩具>咬咬/拉扯玩具 (66040)',
-        subfolder: '生活與訓練配件',
         is_builtin: true,
         field_mappings: {
           dynamic: { ...baseline.dynamic },
@@ -130,7 +126,6 @@ const AppConfig = {
         template_type: 'ACCESSORIES',
         template_file_name: '商品報價單_生活與訓練配件.xlsx',
         category_name: '寵物用品>犬用玩具>球類玩具 (66041)',
-        subfolder: '生活與訓練配件',
         is_builtin: true,
         field_mappings: {
           dynamic: { ...baseline.dynamic },
@@ -201,4 +196,9 @@ const AppConfig = {
   }
 };
 
-window.AppConfig = AppConfig;
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = AppConfig;
+}
+if (typeof window !== 'undefined') {
+  window.AppConfig = AppConfig;
+}

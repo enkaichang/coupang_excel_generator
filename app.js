@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.15.2';
+const APP_VERSION = 'v2.16.1';
 
 function normalizeHeaderKey(str) {
   if (window.SharedUtils) return window.SharedUtils.normalizeKey(str);
@@ -467,7 +467,7 @@ function detectRequiredTemplates(ws, headerRow, rowStart, maxRow, profiles, sour
     }
   }
   const typeColIdx = (sourceConfig?.type_column ? findHeaderColIdx(headerMap, sourceConfig.type_column) : null) || findHeaderColIdx(headerMap, 'TYPE') || findHeaderColIdx(headerMap, '種類') || findHeaderColIdx(headerMap, '品類') || findHeaderColIdx(headerMap, 'Type');
-  const filterColName = (sourceConfig?.filter_column !== undefined) ? sourceConfig.filter_column : '中文背標';
+  const filterColName = (sourceConfig?.filter_column !== undefined) ? sourceConfig.filter_column : '';
   const filterColIdx = (filterColName && filterColName.trim() !== '') ? findHeaderColIdx(headerMap, filterColName) : null;
 
   const matchedProfileIds = new Set();
@@ -614,7 +614,7 @@ function checkMissingColumns(detectedProfiles, ws, headerRow, sourceConfig) {
   const missingMap = new Map();
 
   // 1. Check filter column
-  const filterCol = (sourceConfig?.filter_column !== undefined) ? sourceConfig.filter_column : '中文背標';
+  const filterCol = (sourceConfig?.filter_column !== undefined) ? sourceConfig.filter_column : '';
   if (filterCol && filterCol.trim() !== '') {
     const filterIdx = findHeaderColIdx(headerMap, filterCol);
     if (!filterIdx) {
@@ -756,7 +756,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const wizardProfileName = document.getElementById('wizardProfileName');
   const wizardCategoryName = document.getElementById('wizardCategoryName');
   const wizardKeywords = document.getElementById('wizardKeywords');
-  const wizardSubfolder = document.getElementById('wizardSubfolder');
   const wizardScannedCount = document.getElementById('wizardScannedCount');
   const wizardTableBody = document.getElementById('wizardTableBody');
 
@@ -833,7 +832,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           templateProfiles = stored;
         }
 
-        // Auto-migrate stored profiles to ensure baseline fixed keys and updated shared subfolders exist
+        // Auto-migrate stored profiles to ensure baseline fixed keys exist
         for (const p of templateProfiles) {
           if (!p.field_mappings) p.field_mappings = { fixed: {}, dynamic: {} };
           if (!p.field_mappings.fixed) p.field_mappings.fixed = {};
@@ -841,15 +840,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (!p.field_mappings.fixed['法定種類'] || p.field_mappings.fixed['法定種類'] === '') {
             p.field_mappings.fixed['法定種類'] = 'TW_General';
             modified = true;
-          }
-          if (p.is_builtin) {
-            if ((p.id === 'COLLAR' || p.id === 'LEASH') && (p.subfolder === '項圈' || p.subfolder === '牽繩' || !p.subfolder)) {
-              p.subfolder = '項圈 牽繩';
-              modified = true;
-            } else if ((p.id === 'TOY' || p.id === 'BALL') && (p.subfolder === '玩具及訓練工具' || p.subfolder === '玩具球' || !p.subfolder)) {
-              p.subfolder = '生活與訓練配件';
-              modified = true;
-            }
           }
           if (modified) {
             await window.StorageUtils.saveProfile(p);
@@ -918,7 +908,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           pill.className = 'unmatched-type-pill';
           pill.title = `來源 Excel 中有 ${item.count} 筆商品屬於「${item.type}」，尚未設定專屬模板`;
           pill.innerHTML = `
-            <span class="material-icons" style="font-size: 0.85rem; color: #dc2626;">label</span>
+            <span class="material-symbols-outlined" style="font-size: 0.85rem; color: #dc2626;">label</span>
             <span>${escapeHtml(item.type)}</span>
             <span class="pill-count">(${item.count}筆)</span>
           `;
@@ -949,7 +939,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="dynamic-row fixed-field-row">
           <input type="text" class="key-input" placeholder="目標模板欄位" value="${escapeHtml(k)}">
           <input type="text" class="val-input" placeholder="固定填寫內容" value="${escapeHtml(v)}">
-          <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-icons">delete</span></button>
+          <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-symbols-outlined">delete</span></button>
         </div>`;
     }
 
@@ -961,7 +951,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <select class="val-input form-select">
             ${buildColSelectOptions(availableHeaders, v, '-- 請選擇來源表對應欄位 --')}
           </select>
-          <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-icons">delete</span></button>
+          <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-symbols-outlined">delete</span></button>
         </div>`;
     }
 
@@ -976,16 +966,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             <label style="flex:0 0 110px; font-weight:600;">設定檔名稱:</label>
             <input type="text" id="prof_name" value="${escapeHtml(profile.name || '')}" ${profile.is_builtin ? 'readonly style="background:#f1f5f9;"' : ''}>
           </div>
-          <div class="input-row" style="margin:0;">
-            <label style="flex:0 0 110px; font-weight:600;">輸出子資料夾:</label>
-            <input type="text" id="prof_subfolder" value="${escapeHtml(profile.subfolder || profile.name || '')}">
-          </div>
           <div class="input-row" style="margin:0; align-items:flex-start;">
             <label style="flex:0 0 110px; font-weight:600; padding-top:6px;">匹配關鍵字:</label>
             <div class="keyword-tags-wrapper">
               <div class="keyword-input-group">
                 <input type="text" id="profKeywordInput" placeholder="輸入關鍵字後點擊 + 或按 Enter 新增 (支援逗號分隔)...">
-                <button type="button" id="btnAddProfKeyword" class="btn btn-secondary btn-sm btn-icon" title="新增關鍵字"><span class="material-icons">add</span></button>
+                <button type="button" id="btnAddProfKeyword" class="btn btn-secondary btn-sm btn-icon" title="新增關鍵字"><span class="material-symbols-outlined">add</span></button>
               </div>
               <div id="profKeywordsTagsContainer" class="keyword-tags-container"></div>
             </div>
@@ -1002,8 +988,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span class="badge-${profile.is_builtin ? 'system' : 'inherited'}">${profile.is_builtin ? '內建範本' : '自訂上傳'}</span>
           </div>
           <div class="template-file-actions">
-            <button type="button" id="btnDownloadProfileTemplate" class="btn btn-outline btn-sm btn-icon" title="下載 Excel 範本檔"><span class="material-icons">download</span></button>
-            <button type="button" id="btnReplaceProfileTemplate" class="btn btn-secondary btn-sm btn-icon" title="替換 Excel 範本檔"><span class="material-icons">file_upload</span></button>
+            <button type="button" id="btnDownloadProfileTemplate" class="btn btn-outline btn-sm btn-icon" title="下載 Excel 範本檔"><span class="material-symbols-outlined">download</span></button>
+            <button type="button" id="btnReplaceProfileTemplate" class="btn btn-secondary btn-sm btn-icon" title="替換 Excel 範本檔"><span class="material-symbols-outlined">upload</span></button>
             <input type="file" id="replaceTemplateFileInput" accept=".xlsx" hidden>
           </div>
         </div>
@@ -1012,7 +998,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="form-group">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; margin-bottom:10px; padding-bottom:6px;">
           <h4 style="border:none; margin:0; padding:0;">固定欄位對應 (Fixed Mappings)</h4>
-          <button type="button" class="btn btn-outline btn-sm btn-icon" title="新增固定欄位" onclick="addProfileFixedRow()"><span class="material-icons">add</span></button>
+          <button type="button" class="btn btn-outline btn-sm btn-icon" title="新增固定欄位" onclick="addProfileFixedRow()"><span class="material-symbols-outlined">add</span></button>
         </div>
         <p style="font-size:0.82rem; color:#64748b; margin-bottom:8px;">不論來源資料為何，強制填入目標 Excel 模板的固定值。</p>
         <div id="profileFixedContainer">${fixedHtml}</div>
@@ -1021,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="form-group">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; margin-bottom:10px; padding-bottom:6px;">
           <h4 style="border:none; margin:0; padding:0;">動態欄位對應 (Dynamic Mappings)</h4>
-          <button type="button" class="btn btn-outline btn-sm btn-icon" title="新增動態欄位" onclick="addProfileDynamicRow()"><span class="material-icons">add</span></button>
+          <button type="button" class="btn btn-outline btn-sm btn-icon" title="新增動態欄位" onclick="addProfileDynamicRow()"><span class="material-symbols-outlined">add</span></button>
         </div>
         <p style="font-size:0.82rem; color:#64748b; margin-bottom:8px;">將來源商品表的欄位資料，動態填入目標 Excel 模板的對應欄位中。</p>
         <div id="profileDynamicContainer">${dynamicHtml}</div>
@@ -1029,7 +1015,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       ${!profile.is_builtin ? `
         <div style="display:flex; justify-content:flex-end; margin-top:20px; padding-top:10px; border-top:1px dashed #e2e8f0;">
-          <button type="button" id="btnDeleteCurrentProfile" class="btn btn-danger btn-sm btn-icon" title="刪除此模板設定檔"><span class="material-icons">delete_forever</span></button>
+          <button type="button" id="btnDeleteCurrentProfile" class="btn btn-danger btn-sm btn-icon" title="刪除此模板設定檔"><span class="material-symbols-outlined">delete_forever</span></button>
         </div>
       ` : ''}
     `;
@@ -1047,10 +1033,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const pill = document.createElement('div');
         pill.className = 'keyword-tag-pill';
         pill.innerHTML = `
-          <span class="material-icons">label</span>
+          <span class="material-symbols-outlined">label</span>
           <span>${escapeHtml(kw)}</span>
           <button type="button" class="keyword-tag-remove" title="移除關鍵字" data-index="${index}">
-            <span class="material-icons">close</span>
+            <span class="material-symbols-outlined">close</span>
           </button>
         `;
         pill.querySelector('.keyword-tag-remove').addEventListener('click', (e) => {
@@ -1154,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     div.innerHTML = `
       <input type="text" class="key-input" placeholder="目標模板欄位" value="${escapeHtml(k)}">
       <input type="text" class="val-input" placeholder="固定填寫內容" value="${escapeHtml(v)}">
-      <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-icons">delete</span></button>
+      <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-symbols-outlined">delete</span></button>
     `;
     document.getElementById('profileFixedContainer')?.appendChild(div);
   };
@@ -1168,7 +1154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <select class="val-input form-select">
         ${buildColSelectOptions(availableHeaders, v, '-- 請選擇來源表對應欄位 --')}
       </select>
-      <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-icons">delete</span></button>
+      <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-symbols-outlined">delete</span></button>
     `;
     document.getElementById('profileDynamicContainer')?.appendChild(div);
   };
@@ -1178,11 +1164,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!profile) return;
 
     const nameInput = document.getElementById('prof_name');
-    const subfolderInput = document.getElementById('prof_subfolder');
     const categoryInput = document.getElementById('prof_category_name');
 
     if (nameInput && !profile.is_builtin) profile.name = nameInput.value.trim();
-    if (subfolderInput) profile.subfolder = subfolderInput.value.trim() || profile.name;
     if (categoryInput) profile.category_name = categoryInput.value.trim();
 
     if (Array.isArray(profile._activeKeywords)) {
@@ -1212,7 +1196,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     div.innerHTML = `
       <input type="text" class="key-input" placeholder="目標模板欄位" value="${escapeHtml(k)}">
       <input type="text" class="val-input" placeholder="全域固定填寫內容" value="${escapeHtml(v)}">
-      <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-icons">delete</span></button>
+      <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-symbols-outlined">delete</span></button>
     `;
     document.getElementById('sourceFixedContainer')?.appendChild(div);
   };
@@ -1229,7 +1213,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="dynamic-row fixed-field-row">
           <input type="text" class="key-input" placeholder="目標模板欄位" value="${escapeHtml(k)}">
           <input type="text" class="val-input" placeholder="全域固定填寫內容" value="${escapeHtml(v)}">
-          <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-icons">delete</span></button>
+          <button type="button" class="btn btn-danger btn-sm btn-icon" title="刪除此欄位對應" onclick="this.parentElement.remove()"><span class="material-symbols-outlined">delete</span></button>
         </div>`;
     }
 
@@ -1278,7 +1262,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <div class="input-row">
           <label>篩選欄位(有填寫才處理):</label>
-          <select id="cfg_filter_column" class="form-select">${buildColSelectOptions(currentSheetHeaders, source.filter_column || '中文背標', '-- 不啟用篩選 (處理全部列) --')}</select>
+          <select id="cfg_filter_column" class="form-select">${buildColSelectOptions(currentSheetHeaders, source.filter_column || '', '-- 不啟用篩選 (處理全部列) --')}</select>
         </div>
       </div>
 
@@ -1315,7 +1299,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="form-group">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <h4 style="margin:0;">全域固定欄位設定 (Global Fixed Mappings)</h4>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.addSourceFixedRow()"><span class="material-icons" style="font-size:16px;">add</span> 新增全域固定欄位</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.addSourceFixedRow()"><span class="material-symbols-outlined" style="font-size:16px;">add</span> 新增全域固定欄位</button>
         </div>
         <p style="font-size:0.82rem; color:#64748b; margin-bottom:12px;">設定所有報價單通用的標準固定填寫內容（如包裝審核宣告、應稅、進口、法定種類、負責廠商等）。若個別品類模板有另外設定，將以模板設定優先。</p>
         <div id="sourceFixedContainer">${sourceFixedHtml}</div>
@@ -1337,7 +1321,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const el = document.getElementById(id);
             if (el) el.innerHTML = buildColSelectOptions(headers, el.value || curVal, emptyLabel);
           };
-          updateSelect('cfg_filter_column', source.filter_column || '中文背標', '-- 不啟用篩選 (處理全部列) --');
+          updateSelect('cfg_filter_column', source.filter_column || '', '-- 不啟用篩選 (處理全部列) --');
           updateSelect('cfg_collection_column', source.collection_column || 'COLLECTION');
           updateSelect('cfg_type_column', source.type_column || 'TYPE');
           updateSelect('cfg_color_column', source.color_column || '中文顏色');
@@ -1398,7 +1382,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           const defaultName = file.name.replace(/\.xlsx$/i, '').replace(/^商品報價單_/, '');
           wizardProfileName.value = defaultName;
           wizardCategoryName.value = '';
-          wizardSubfolder.value = defaultName;
           wizardScannedCount.textContent = scanResult.requiredColumns.length;
 
           // Initialize wizard keyword tag chips
@@ -1418,10 +1401,10 @@ document.addEventListener('DOMContentLoaded', async () => {
               const pill = document.createElement('div');
               pill.className = 'keyword-tag-pill';
               pill.innerHTML = `
-                <span class="material-icons">label</span>
+                <span class="material-symbols-outlined">label</span>
                 <span>${escapeHtml(kw)}</span>
                 <button type="button" class="keyword-tag-remove" title="移除關鍵字" data-index="${index}">
-                  <span class="material-icons">close</span>
+                  <span class="material-symbols-outlined">close</span>
                 </button>
               `;
               pill.querySelector('.keyword-tag-remove').addEventListener('click', (e) => {
@@ -1487,12 +1470,12 @@ document.addEventListener('DOMContentLoaded', async () => {
               <td colspan="4">
                 <div class="wizard-group-header-content">
                   <div class="wizard-group-title">
-                    <span class="material-icons" style="font-size: 1.2rem;">${iconName}</span>
+                    <span class="${iconName === 'auto_awesome' ? 'material-icons' : 'material-symbols-outlined'}" style="font-size: 1.2rem;">${iconName}</span>
                     <span>${groupTitle}</span>
                     ${countBadge}
                   </div>
                   <button type="button" class="wizard-toggle-btn ${toggleExpandedClass}" title="展開/收合">
-                    <span class="material-icons">expand_more</span>
+                    <span class="material-symbols-outlined">expand_more</span>
                     <span class="wizard-toggle-label">${toggleText}</span>
                   </button>
                 </div>
@@ -1621,7 +1604,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       const categoryName = wizardCategoryName.value.trim();
-      const subfolder = wizardSubfolder.value.trim() || profName;
 
       const dynamic = {};
       const fixed = {};
@@ -1655,7 +1637,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         template_id: profileId,
         template_file_name: pendingWizard.file.name,
         category_name: categoryName,
-        subfolder: subfolder,
         is_builtin: false,
         field_mappings: { dynamic, fixed }
       };
@@ -1750,7 +1731,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           mainTr.innerHTML = `
             <td>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="material-icons" style="font-size: 1.1rem; color: #f59e0b;">category</span>
+                <span class="material-symbols-outlined" style="font-size: 1.1rem; color: #f59e0b;">category</span>
                 <span>${typeDisplay}</span>
               </div>
             </td>
@@ -1759,7 +1740,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </td>
             <td style="text-align: right;">
               <button type="button" class="unmatched-toggle-btn" title="展開/收合商品明細">
-                <span class="material-icons">expand_more</span>
+                <span class="material-symbols-outlined">expand_more</span>
                 <span class="toggle-text">展開明細 (${group.items.length})</span>
               </button>
             </td>
@@ -1887,7 +1868,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           headers = getCommonSourceHeaders();
         }
         if (wizardFilterColumn) {
-          const curVal = wizardFilterColumn.value || currentSourceConfig?.filter_column || '中文背標';
+          const curVal = wizardFilterColumn.value || currentSourceConfig?.filter_column || '';
           wizardFilterColumn.innerHTML = buildColSelectOptions(headers, curVal, '-- 不啟用篩選 (處理全部列) --');
         }
       }
@@ -1928,7 +1909,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectedSheetName: defaultSheetName,
         selectedHeaderRow: 3,
         selectedRowStart: 4,
-        selectedFilterCol: '中文背標',
+        selectedFilterCol: currentSourceConfig?.filter_column || '',
         detectedProfiles: [],
         missingItems: [],
         excelHeaderNames: [],
@@ -1958,7 +1939,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const selectedRowStart = currentStep2Data.selectedRowStart;
         const totalR = currentStep2Data.totalR;
 
-        const selectedFilterCol = wizardFilterColumn ? wizardFilterColumn.value.trim() : (currentSourceConfig?.filter_column || '中文背標');
+        const selectedFilterCol = wizardFilterColumn ? wizardFilterColumn.value.trim() : (currentSourceConfig?.filter_column || '');
         const selectedTypeCol = wizardTypeColumn ? wizardTypeColumn.value.trim() : (currentSourceConfig?.type_column || 'TYPE');
         const selectedCollecCol = wizardCollectionColumn ? wizardCollectionColumn.value.trim() : (currentSourceConfig?.collection_column || 'COLLECTION');
         const selectedColorCol = wizardColorColumn ? wizardColorColumn.value.trim() : (currentSourceConfig?.color_column || '中文顏色');
@@ -2030,7 +2011,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           detectedProfiles.forEach(p => {
             const badge = document.createElement('span');
             badge.className = 'badge-template';
-            badge.innerHTML = `<span class="material-icons" style="font-size: 0.85rem;">category</span><span>${escapeHtml(p.name)}</span>`;
+            badge.innerHTML = `<span class="material-symbols-outlined" style="font-size: 0.85rem;">category</span><span>${escapeHtml(p.name)}</span>`;
             detectedTemplatesContainer.appendChild(badge);
           });
         }
@@ -2052,12 +2033,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 headDiv.className = 'wizard-unmatched-type-head';
                 headDiv.innerHTML = `
                   <div style="display:flex; align-items:center; gap:6px;">
-                    <span class="material-icons" style="font-size:0.95rem; color:#f59e0b;">label</span>
+                    <span class="material-symbols-outlined" style="font-size:0.95rem; color:#f59e0b;">label</span>
                     <span>${g.isUntyped ? '<em>(未填寫 / 空白)</em>' : `<strong>${escapeHtml(g.type)}</strong>`}</span>
                   </div>
                   <div style="display:flex; align-items:center; gap:6px;">
                     <span class="unmatched-count-badge">${g.items.length} 筆</span>
-                    <span class="material-icons toggle-icon" style="font-size:1.1rem; transition: transform 0.2s;">expand_more</span>
+                    <span class="material-symbols-outlined toggle-icon" style="font-size:1.1rem; transition: transform 0.2s;">expand_more</span>
                   </div>
                 `;
 
@@ -2807,14 +2788,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
 
-      const filterColName = (currentSourceConfig?.filter_column !== undefined) ? currentSourceConfig.filter_column : '中文背標';
+      const filterColName = (currentSourceConfig?.filter_column !== undefined) ? currentSourceConfig.filter_column : '';
       const filterColIdx = (filterColName && filterColName.trim() !== '') ? findHeaderColIdx(headers, filterColName) : null;
 
       if (!nameColIdx) {
         throw new Error(`來源 Excel 表頭（第 ${headerRow} 列）缺少「商品名稱」或「中文品名」必要欄位！請在對照表設定或上傳時指定品名欄位。`);
       }
 
-      logMessage(`處理範圍：第 ${rowStart} 列 至 第 ${rowEnd} 列（共掃描 ${rangeInfo.totalDataRows} 列，其中符合背標條件之有效商品共 ${totalValidCount} 筆，工作表總列數: ${totalRows} 列）`);
+      logMessage(`處理範圍：第 ${rowStart} 列 至 第 ${rowEnd} 列（共掃描 ${rangeInfo.totalDataRows} 列，其中有效商品共 ${totalValidCount} 筆，工作表總列數: ${totalRows} 列）`);
 
       if (totalValidCount === 0) {
         setProgress(100, '所選範圍內無符合條件之有效商品資料。');
@@ -2846,7 +2827,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           profile = templateProfiles.find(p => p.id === 'LEASH') || templateProfiles[0] || window.AppConfig.getDefaultProfiles()[0];
         }
 
-        const targetSubfolder = subfolderHint || profile.subfolder || profile.name || '未分類品項';
+        const targetSubfolder = subfolderHint || (window.SharedUtils ? window.SharedUtils.getTemplateSubfolder(profile, templateProfiles) : (profile.name || '未分類品項'));
         const templateFileName = profile.template_file_name || (profile.id === 'HARNESS' ? '商品報價單_胸背帶.xlsx' : '商品報價單_項圈 牽繩.xlsx');
         const templateKey = `${targetSubfolder}:::${templateFileName}`;
 

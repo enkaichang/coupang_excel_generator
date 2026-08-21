@@ -186,7 +186,10 @@ class CoupangProcessor {
       const tmplType = (bestProfile.template_type || bestProfile.id || 'LEASH').toUpperCase();
       const tmplFile = bestProfile.template_file_name || bestProfile.template_name || (tmplType === 'HARNESS' ? '商品報價單_胸背帶.xlsx' : '商品報價單_項圈 牽繩.xlsx');
       const outputFile = tmplFile.replace(/\.xlsx$/i, '_auto_generate.xlsx');
-      const targetSubfolder = bestProfile.subfolder || bestProfile.name || (tmplType === 'HARNESS' ? '胸背帶' : '項圈 牽繩');
+      const utils = CoupangProcessor.getUtils();
+      const targetSubfolder = (utils && typeof utils.getTemplateSubfolder === 'function')
+        ? utils.getTemplateSubfolder(bestProfile, this.templateProfiles)
+        : (bestProfile.name || (tmplType === 'HARNESS' ? '胸背帶' : '項圈 牽繩'));
       return {
         template_id: tmplId,
         template_type: tmplType,
@@ -732,7 +735,7 @@ class CoupangProcessor {
     };
   }
 
-  static extractMappingsFromExcel(workbook, headerRow = 3, rowStart = 4, filterColName = '中文背標', targetSheetName = null, templateProfiles = []) {
+  static extractMappingsFromExcel(workbook, headerRow = 3, rowStart = 4, filterColName = '', targetSheetName = null, templateProfiles = []) {
     const utils = CoupangProcessor.getUtils();
     const ws = utils
       ? utils.getSourceSheet(workbook, targetSheetName, headerRow)

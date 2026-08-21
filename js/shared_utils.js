@@ -312,6 +312,42 @@
         if (s) return s;
       }
       return workbook.sheet(0);
+    },
+
+    /**
+     * 取得設定檔對應之範本識別鍵值 (Template Key)
+     */
+    getProfileTemplateKey: function(profile) {
+      if (!profile) return '商品報價單_項圈 牽繩.xlsx';
+      if (profile.template_file_name) return String(profile.template_file_name).trim().toLowerCase();
+      if (profile.template_type) return String(profile.template_type).trim().toUpperCase();
+      if (profile.id === 'HARNESS') return '商品報價單_胸背帶.xlsx';
+      return '商品報價單_項圈 牽繩.xlsx';
+    },
+
+    /**
+     * 自動判定範本群組輸出子資料夾名稱：
+     * 若多個設定檔共用同一個 Excel 範本，自動合併其設定檔名稱（例如：「項圈 牽繩」或「玩具及訓練工具 玩具球」）
+     * 若為獨立範本則直接使用該設定檔名稱
+     */
+    getTemplateSubfolder: function(profile, allProfiles = []) {
+      if (!profile) return '未分類品項';
+      const targetKey = this.getProfileTemplateKey(profile);
+      const profiles = (Array.isArray(allProfiles) && allProfiles.length > 0) ? allProfiles : [profile];
+      const matched = profiles.filter(p => this.getProfileTemplateKey(p) === targetKey);
+
+      const names = [];
+      for (const p of matched) {
+        const n = (p && p.name ? String(p.name).trim() : '');
+        if (n && !names.includes(n)) {
+          names.push(n);
+        }
+      }
+
+      if (names.length > 0) {
+        return names.join(' ');
+      }
+      return (profile.name ? String(profile.name).trim() : '未分類品項');
     }
   };
 

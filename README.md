@@ -5,7 +5,7 @@
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-coupang__excel__generator-181717?logo=github)](https://github.com/enkaichang/coupang_excel_generator)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version: v2.15.2](https://img.shields.io/badge/Version-v2.15.2-blue.svg)](https://github.com/enkaichang/coupang_excel_generator)
+[![Version: v2.16.1](https://img.shields.io/badge/Version-v2.16.1-blue.svg)](https://github.com/enkaichang/coupang_excel_generator)
 
 ---
 
@@ -32,7 +32,7 @@
    - 屬性 100% 直通來源 Excel 獨立欄位與對照表 Profile 設定，杜絕品名字串猜測誤差。
    - 多層級搜尋引擎：依據 SKU 代碼、系列英文名、顏色別名自動搜尋主圖、情境圖1、情境圖2及背標圖。
 4. **一站式多模板設定檔與自動掃描精靈**：
-   - 每個品類模板各自綁定獨立的匹配關鍵字、細分分類代碼、輸出子資料夾、Excel 範本檔與欄位對應（Fixed/Dynamic），一次設定完成。
+   - 每個品類模板各自綁定獨立的匹配關鍵字、細分分類代碼、Excel 範本檔與欄位對應（Fixed/Dynamic），一次設定完成。
    - 上傳新 Excel 模板時，系統自動掃描必填欄位並以精靈引導配置。
 5. **圖片規格合規自動化**：
    - 自動檢測圖片寬度，主圖與情境圖自動等比放大並補白邊至 1000x1000，次要圖檔（尺寸表、背標）自動放大短邊至 1000px，確保符合電商上架規範。
@@ -70,7 +70,7 @@ coupang_excel_generator/
 ├── 欄位對應.md             # 來源與目標欄位對照、格式規範與檢查機制手冊
 ├── 產品技術細節流程說明.md  # 系統運作流程、比對機制、命名規範與來源欄位規格
 └── js/
-    ├── shared_utils.js     # 通用工具庫（字串正則標準化、全半形轉換、數值防呆與工作表探測）
+    ├── shared_utils.js     # 通用工具庫（字串正則標準化、全半形轉換、數值防呆、工作表探測與範本子資料夾判定）
     ├── storage_utils.js    # IndexedDB 儲存介面與設定檔備份匯出/匯入工具
     ├── default_config.js   # 預設模板設定檔、基準對照與系列/顏色字典
     ├── image_utils.js      # Canvas 圖片載入、尺寸檢測與等比縮放工具
@@ -100,11 +100,32 @@ coupang_excel_generator/
 
 ### 1. 對照表與多模板管理器
 點擊右上角「**對照表設定**」按鈕，可開啟設定對話框：
-- **模板與設定檔 (Templates & Profiles)**：一站式管理各品類模板之匹配關鍵字、細分分類代碼、輸出子資料夾、Excel 範本檔與獨立欄位對應（Fixed/Dynamic），支援上傳新模板並自動掃描必填欄位。
+- **模板與設定檔 (Templates & Profiles)**：一站式管理各品類模板之匹配關鍵字、細分分類代碼、Excel 範本檔與獨立欄位對應（Fixed/Dynamic），支援上傳新模板並自動掃描必填欄位。
 - **來源表設定 (Source)**：調整來源 Excel 工作表名稱、標題列、資料起始列、篩選欄位、全域固定品牌/製造商、動態欄位對應，以及全域固定欄位設定（包裝審核免照聲明、應稅、供貨方式、進口商品、法定種類、製造負責商等）。
 - **備份與還原**：提供「匯出備份 (JSON)」與「匯入設定 (JSON)」功能，輕鬆備份與跨裝置轉移完整設定。
 
 ## 📝 版本日誌 (Changelog)
+
+### [v2.16.1] - 2026-08-21
+#### ⚙️ 篩選欄位預設為不啟用篩選 (Filter Column Default Disabled)
+- **篩選欄位預設留空**：將來源 Excel 預設篩選欄位調整為「不啟用篩選」（留空處理全部列），提供更直覺且靈活的資料讀取流程；使用者仍可依需求在來源表設定或上傳精靈中自由指定篩選欄位。
+
+---
+
+### [v2.16.0] - 2026-08-21
+#### 📂 移除自訂輸出子資料夾設定，升級為範本群組自動命名機制 (Automatic Template-Grouped Output Directory Naming)
+- **移除手動「輸出子資料夾」欄位**：全面自新增設定檔精靈、設定檔編輯卡片及儲存結構中移除「輸出子資料夾」設定，大幅簡化 Profile 設定流程與版面複雜度。
+- **自動判斷同範本並群組命名**：在匯出與活頁簿初始化時，由系統自動判斷多個設定檔是否共用同一個 Excel 報價單範本。若共用相同範本，輸出資料夾名稱自動取 `{設定檔名稱一} {設定檔名稱二} ...`（以空格分隔，如 `項圈 牽繩`、`玩具及訓練工具 玩具球`）；獨立範本則自動取該設定檔名稱（如 `胸背帶`），徹底免去手動維護子資料夾名稱之負擔。
+- **共用判定模組化 (`SharedUtils.getTemplateSubfolder`)**：將範本識別鍵與資料夾名稱聚合邏輯集中至共用工具庫，落實 DRY 原則與廠商通用性。
+
+---
+
+### [v2.15.3] - 2026-08-21
+#### 🎨 視覺圖示升級為 Google Material Symbols (Material Symbols Outlined Upgrade)
+- **全面升級 Material Symbols**：將系統全站按鈕、彈窗與精靈流程中的圖示由 Material Icons 升級為現代化 Google Material Symbols Outlined。
+- **保留 Auto Awesome 品牌圖示**：依需求保留「開始處理」按鈕之經典 `auto_awesome` 圖示，兼顧視覺質感與核心識別度。
+
+---
 
 ### [v2.15.2] - 2026-08-21
 #### 🎯 完整中文品名嚴格包含比對與同系列子字串目錄區分 (Exact Full Name Matching & Subset Disambiguation)
